@@ -69,9 +69,13 @@ for i in new_map:
              y+=1
     x+=1
 open_new_map.close()
+bul_mas = numpy.zeros((num_str,num_clm))
 # for i in range(num_str):
 #     for j in range(num_clm):
 def Rekyrs(index,jndex):
+    bul_mas[index][jndex]+=1
+    if bul_mas[index][jndex]>=3:
+         return 0
     if index == num_str-1 and jndex == 0:
         if mas[num_str-1][0] < mas[num_str-1][1] and mas[num_str-1][0]<mas[num_str-2][0]:
             mas[num_str-1][0]+=0.25
@@ -92,6 +96,8 @@ def Rekyrs(index,jndex):
     if jndex<num_clm-1:
         Rekyrs(index,jndex+1)
     return 0
+
+
 Rekyrs(0,0)
 
 for i in range(num_str):
