@@ -207,11 +207,13 @@ def circle(i,j):
         if Rad>Radius:
             Radius=Rad
     Radius=int(Radius)+2
+    return [middle_x, middle_y, Radius]
     print(middle_x, middle_y, Radius)
 
+Circle_array = list()
 for i in range(num_str):
     for j in range(num_clm):
         if mas[i][j]==1 or mas[i][j]==0.75:
-            circle(i,j)
+            Circle_array.append(circle(i,j))
 
 
