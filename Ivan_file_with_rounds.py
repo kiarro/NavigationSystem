@@ -207,7 +207,7 @@ def circle(i,j):
         if Rad>Radius:
             Radius=Rad
     Radius=int(Radius)+2
-    return [middle_x, middle_y, Radius]
+    return (middle_x, middle_y, Radius)
     print(middle_x, middle_y, Radius)
 
 Circle_array = list()
