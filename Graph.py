@@ -1,42 +1,54 @@
 from PIL import Image
 
-
-# Dunno
-highestPoint = 25
+highestPoint=0
 lowestPoint = 0
+txt_file_with_heights="0"
+txt_file_with_danger_of_heights="0"
+map_image="0"
+depth_danger_image="0"
+final_image="0"
+ground_colour=0
+path_colour=0
+zones=0
 
-# Input txt files (they must have same height and width)
-txt_file_with_heights = "G:\Maps\Single_map.txt"
-txt_file_with_danger_of_heights = "DepthDangerZone.txt"
+def main(filename):
+    global highestPoint,lowestPoint,txt_file_with_heights,txt_file_with_danger_of_heights,map_image,depth_danger_image,final_image,ground_colour,path_colour,zones
+    # Dunno
+    highestPoint = 25
+    lowestPoint = 0
 
-# Output images (Program won't work with formats, that don't support RGBA format)
-map_image = "Map.png"
-depth_danger_image = "DangerDepthMask.png"
-final_image = "Finale.png"
+    # Input txt files (they must have same height and width)
+    txt_file_with_heights = filename
+    txt_file_with_danger_of_heights = "DepthDangerZone.txt"
 
-# Map colours
-ground_colour = 160, 82, 45, 255
-path_colour = 255, 255, 255, 255
+    # Output images (Program won't work with formats, that don't support RGBA format)
+    map_image = "Map.png"
+    depth_danger_image = "DangerDepthMask.png"
+    final_image = "Finale.png"
 
-# Colours of zones
-safe_zone_colour = 255, 255, 255, 0  # Transparent white
-low__danger_zone_colour = 255, 255, 204, 150  # Half-transparent light yellow
-middle_danger_zone_colour = 255, 255, 0, 150  # Half-transparent yellow
-high_danger_zone_colour = 255, 140, 0, 150  # Half-transparent orange
-full_danger_zone_colour = 255, 0, 0, 150  # Half-transparent red
+    # Map colours
+    ground_colour = 160, 82, 45, 255
+    path_colour = 255, 255, 255, 255
 
+    # Colours of zones
+    safe_zone_colour = 255, 255, 255, 0  # Transparent white
+    low__danger_zone_colour = 255, 255, 204, 150  # Half-transparent light yellow
+    middle_danger_zone_colour = 255, 255, 0, 150  # Half-transparent yellow
+    high_danger_zone_colour = 255, 140, 0, 150  # Half-transparent orange
+    full_danger_zone_colour = 255, 0, 0, 150  # Half-transparent red
 
-zones = {
+    zones = {
         0: safe_zone_colour,
         0.25: low__danger_zone_colour,
         0.5: middle_danger_zone_colour,
         0.75: high_danger_zone_colour,
         1: full_danger_zone_colour
-        }
+    }
 
 
-def draw_line(x_st, y_st, x_en, y_en, image=map_image):
-    im = Image.open(image)
+def draw_line(x_st, y_st, x_en, y_en):
+    global map_image, path_colour
+    im = Image.open(map_image)
     if x_st == x_en:
         if y_st >= y_en:
             start = y_en
@@ -44,11 +56,11 @@ def draw_line(x_st, y_st, x_en, y_en, image=map_image):
         else:
             start = y_st
             end = y_en
-        for y in range(start, end+1):
+        for y in range(start, end + 1):
             im.putpixel((x_st, y), path_colour)
     else:
-        k = (y_en - y_st)/(x_en - x_st)
-        b = y_en - x_en*k
+        k = (y_en - y_st) / (x_en - x_st)
+        b = y_en - x_en * k
         if x_st >= x_en:
             start = x_en
             end = x_st
@@ -58,26 +70,26 @@ def draw_line(x_st, y_st, x_en, y_en, image=map_image):
             end = x_en
             y_pr = y_st
         for x in range(start, end):
-            y = int(k*x + b)
-            if y>y_pr:
-                for yy in range(y_pr, y+1):
+            y = int(k * x + b)
+            if y > y_pr:
+                for yy in range(y_pr, y + 1):
                     im.putpixel((x, yy), path_colour)
             else:
-                for yy in range(y, y_pr+1):
+                for yy in range(y, y_pr + 1):
                     im.putpixel((x, yy), path_colour)
             y_pr = y
-    im.save(image)
+    im.save(map_image)
     im.close()
 
-
-def circle_draw(center_x, center_y, radius, image=map_image):
-    im = Image.open(image)  # Open image
+def circle_draw(center_x, center_y, radius):
+    global map_image, ground_colour
+    im = Image.open(map_image)  # Open image
     width, height = im.size  # Get size of image
     right = center_x + radius  # Define part of circumscribed square which is in the image
     left = center_x - radius
     top = center_y - radius
     bot = center_y + radius
-    temp = radius*radius
+    temp = radius * radius
     while right >= width:
         right -= 1
     while left < 0:
@@ -86,15 +98,15 @@ def circle_draw(center_x, center_y, radius, image=map_image):
         top += 1
     while bot >= height:
         bot -= 1
-    for y in range(top, bot+1, 1):  # Run through all pixels of this part and find all of them with coordinates
-        for x in range(left, right+1, 1):  # suitable for this circle
-            if ((y - center_y)*(y - center_y) + (x - center_x)*(x - center_x)) - temp <= 0:
+    for y in range(top, bot + 1, 1):  # Run through all pixels of this part and find all of them with coordinates
+        for x in range(left, right + 1, 1):  # suitable for this circle
+            if ((y - center_y) * (y - center_y) + (x - center_x) * (x - center_x)) - temp <= 0:
                 im.putpixel((x, y), ground_colour)
-    im.save(image)
+    im.save(map_image)
     im.close()
 
-
 def map_colouring(depth):
+    global highestPoint, ground_colour
     if depth == 0:
         return ground_colour
     else:
@@ -104,10 +116,9 @@ def map_colouring(depth):
         b = 255 - temp
         return r, g, b, 255
 
-
 def danger_colouring(danger_meter):
+    global zones
     return zones.get(danger_meter)  # Get a zone colour from dict
-
 
 def list_nums(txt_name):
     read = open(txt_name, "r")
@@ -115,8 +126,8 @@ def list_nums(txt_name):
     read.close()
     return content
 
-
 def classify_warning(depth):
+    global highestPoint, lowestPoint
     temp = (highestPoint - depth) / (highestPoint - lowestPoint)
     if temp <= 0:
         return '0'
@@ -129,8 +140,8 @@ def classify_warning(depth):
     else:
         return '1'
 
-
 def draw_map(num_list):
+    global txt_file_with_danger_of_heights, map_image, depth_danger_image
     main_im = Image.new('RGBA', (len(num_list[0].split()), len(num_list)))  # Create empty matrix-sized image twice
     danger_im = Image.new('RGBA', (len(num_list[0].split()), len(num_list)))
     txt_file = open(txt_file_with_danger_of_heights, 'w+')  # Create/open txt file for dangers
@@ -151,8 +162,8 @@ def draw_map(num_list):
     danger_im.close()
     txt_file.close()
 
-
 def combine(image1_n, image2_n):
+    global final_image
     image1 = Image.open(image1_n)  # Open both images
     image2 = Image.open(image2_n)
     width1, height1 = image1.size  # Get resolutions of images
@@ -163,7 +174,7 @@ def combine(image1_n, image2_n):
             for x in range(width1):
                 r1, g1, b1, a1 = image1.getpixel((x, y))  # Get pixel values
                 r2, g2, b2, a2 = image2.getpixel((x, y))
-                if a2 == 0:     # Check if safe zone and fill pixel
+                if a2 == 0:  # Check if safe zone and fill pixel
                     finale.putpixel((x, y), (r1, g1, b1, a1))
                 else:
                     finale.putpixel((x, y), (r2, g2, b2, a2))
@@ -172,8 +183,9 @@ def combine(image1_n, image2_n):
     image1.close()
     image2.close()
 
-
-def full_map_conjunction():
+def full_map_conjunction(filename):
+    global txt_file_with_heights, txt_file_with_danger_of_heights, map_image, depth_danger_image, final_image
+    main(filename)
     # Read file
     matrix_map = list_nums(txt_file_with_heights)
     draw_map(matrix_map)
@@ -182,7 +194,5 @@ def full_map_conjunction():
     combine(map_image, depth_danger_image)
     # circle_draw(780, 500, 50, final_image)
     # draw_line(100, 300, 500, 400, final_image)
+    print(highestPoint, lowestPoint, txt_file_with_heights, txt_file_with_danger_of_heights, map_image, depth_danger_image, final_image, ground_colour, path_colour,zones)
 
-
-if __name__ == '__main__':
-    full_map_conjunction()
