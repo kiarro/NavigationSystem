@@ -40,6 +40,14 @@ zones = {
         }
 
 
+def createImageFile(name, width, height):
+    im = Image.new('RGBA', (width, height))
+    for y in range(height):
+        for x in range(width):
+            im.putpixel((x,y), (50,50,255,255))
+    im.save(name)
+    im.close()
+
 def draw_list_of_lines(list_of_lines, image=final_image):
     im = Image.open(image)
     for line in list_of_lines:
@@ -208,10 +216,11 @@ def full_map_conjunction():
     # Draw final image
     combine(map_image, depth_danger_image)
 
-def set_parameters(txt_file, draft__min, draft__max):
-    global txt_file_with_heights, draft_min, draft_max
+def set_parameters(txt_file="", draft__min=0, draft__max=0, width=0, height=0):
+    global txt_file_with_heights, draft_min, draft_max, width_of_map, height_of_map
     txt_file_with_heights = txt_file
     draft_min, draft_max = draft__min, draft__max
+    width_of_map, height_of_map = width, height
 
 def get_map_sizes():
     return width_of_map, height_of_map

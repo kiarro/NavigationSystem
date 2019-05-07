@@ -119,7 +119,7 @@ def launch(i,j):
                 launch(i, j - 1)
 
 # create circumference around area which contains this dot
-def circle(i,j):
+def circle(i,j, width, height):
     spisok_border = list()
     sum_X=0
     sum_Y=0
@@ -129,7 +129,7 @@ def circle(i,j):
     while(len(spisok)>0):
         y = spisok.pop()
         x = spisok.pop()
-        while(mas[x][y]==tohka):
+        while(mas[x][y]==tohka and y>0):
             y-=1
         y+=1
         spisok_border.append(x)
@@ -140,22 +140,23 @@ def circle(i,j):
             sum_X+=x
             sum_Y+=y
             N+=1
-            if spanUp==0 and mas[x-1][y] == tohka:
+            if spanUp==0 and x>0 and mas[x-1][y] == tohka:
                 spisok.append(x-1)
                 spisok.append(y)
                 spanUp=1
             else:
-                if spanUp==1 and mas[x-1][y] !=tohka:
+                if spanUp==1 and x>0 and mas[x-1][y] !=tohka:
                     spanUp = 0
-            if spanDown==0 and mas[x+1][y]==tohka:
+            if spanDown==0 and x<width and mas[x+1][y]==tohka:
                 spisok.append(x+1)
                 spisok.append(y)
                 spanDown=1
             else:
-                if spanDown==1 and mas[x+1][y]!=tohka:
+                if spanDown==1 and x<width and mas[x+1][y]!=tohka:
                     spanDown=0
             mas[x][y]+=tohka
-            y+=1
+            if (y<height-1):
+                y+=1
         spisok_border.append(x)
         spisok_border.append(y-1)
     middle_x = int(sum_X/N)
@@ -180,8 +181,8 @@ def transform_areas_to_circles(width, height, depth_text_map_file):
     Circle_array = list()
     for i in range(height):
         for j in range(width):
-            if mas[i][j] == 1: #or mas[i][j] == 0.75:
-                Circle_array.append(circle(i, j))
+            if mas[j][i] == 1: #or mas[i][j] == 0.75:
+                Circle_array.append(circle(j, i, width, height))
     return Circle_array
 
 def readArrayFromTextFile(text_file, width, height):

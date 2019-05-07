@@ -15,6 +15,23 @@ old_picture = '0'
 txt_file_with_danger_of_heights = "DepthDangerZone.txt"
 coordinates = [0, 0, 999, 999]
 
+def btn_route():
+
+    route = RoutePlanning.CreateRouteByTangents(coordinates[0], coordinates[1], coordinates[2], coordinates[3], map_width,
+                                      map_height, circle_array)
+    print("Task complete: route was planed.")
+
+    i_pr = route[0]
+    lines = list()
+    for i in route:
+        lines.append([(int)(i_pr.x0 + (i_pr.r + 0.51) * numpy.cos(i_pr.a2)),
+                      (int)(i_pr.y0 + (i_pr.r + 0.51) * numpy.sin(i_pr.a2)),
+                      (int)(i.x0 + (i.r + 0.51) * numpy.cos(i.a1)),
+                      (int)(i.y0 + (i.r + 0.51) * numpy.sin(i.a1))])
+        i_pr = i
+    Graph.draw_list_of_lines(lines)
+    print("Task complete: route was drew.")
+
 def btn_parametrs():  # окно для параметров
     def vvod():
         global maxdep, mindep,coordinates
@@ -26,6 +43,10 @@ def btn_parametrs():  # окно для параметров
         coordinates[1] = int(coordinates[1])
         coordinates[2] = int(coordinates[2])
         coordinates[3] = int(coordinates[3])
+
+    def setDefault():
+        global maxdep, mindep,coordinates
+
 
     def close_window():  # закрытие окна по кнопке ok
         window.destroy()
@@ -105,27 +126,15 @@ class Menu(Frame):  # меню
 
     def Start(self, num):  # вызов функций Димы и Вани
         if num == 1:
-            global map_width, map_height
+            global map_width, map_height, circle_array
             Graph.set_parameters(filename, mindep, maxdep)
             Graph.full_map_conjunction()
             print("Task complete: map was drew.")
             map_width, map_height = Graph.get_map_sizes()
             circle_array = TransformMatrix.transform_areas_to_circles(map_width, map_height, txt_file_with_danger_of_heights)
-            print("Task complete: circumferences were constructed.")
-            route = RoutePlanning.CreateRoute(coordinates[0], coordinates[1], coordinates[2], coordinates[3], map_width, map_height, circle_array)
-            print("Task complete: route was planed.")
-
             Graph.draw_list_of_circles(circle_array)
-            i_pr = route[0]
-            lines = list()
-            for i in route:
-                lines.append([(int)(i_pr.x0 + (i_pr.r + 0.51) * numpy.cos(i_pr.a2)),
-                              (int)(i_pr.y0 + (i_pr.r + 0.51) * numpy.sin(i_pr.a2)),
-                              (int)(i.x0 + (i.r + 0.51) * numpy.cos(i.a1)),
-                              (int)(i.y0 + (i.r + 0.51) * numpy.sin(i.a1))])
-                i_pr = i
-            Graph.draw_list_of_lines(lines)
-            print("Task complete: route was drew.")
+            print("Task complete: circumferences were constructed.")
+
 
     def initUI(self):  # кнопки
         self.parent.title("Windows")
@@ -143,12 +152,14 @@ class Menu(Frame):  # меню
         obtn = Button(self, text="Обработка", height=1, width=20, command=lambda: self.Start(1))
         obtn.grid(row=4, column=0)
 
+        routebtn = Button(self, text="Построить маршрут", height=1, width=20, command=btn_route)
+        routebtn.grid(row=5, column=0)
 
         lbl2 = Label(self, text="Просмотр результатов:")
-        lbl2.grid(row=5, column=0)  # надпись перед выпадающей кнопкой
+        lbl2.grid(row=6, column=0)  # надпись перед выпадающей кнопкой
 
         lbl3 = Label(self)  # область под выпадающую кнопку
-        lbl3.grid(row=6, column=0)
+        lbl3.grid(row=7, column=0)
 
         # выпадающая кнопка
         c = ttk.Combobox(lbl3, width=21)           #width=21 для  Windows 10
