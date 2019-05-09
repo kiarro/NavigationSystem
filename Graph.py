@@ -19,7 +19,7 @@ final_image = "Finale.png"
 
 # Map colours
 ground_colour = 160, 82, 45, 255
-path_colour = 255, 255, 255, 255
+path_colour = 50, 180, 50, 255
 
 # Colours of zones
 safe_zone_colour = 255, 255, 255, 0  # Transparent white
@@ -42,16 +42,18 @@ zones = {
 
 def createImageFile(name, width, height):
     im = Image.new('RGBA', (width, height))
-    for y in range(height):
-        for x in range(width):
-            im.putpixel((x,y), (50,50,255,255))
+    # for y in range(height):
+    #     for x in range(width):
+    #         im.putpixel((x,y), (50,50,255,255))
     im.save(name)
     im.close()
 
 def draw_list_of_lines(list_of_lines, image=final_image):
+    global width_of_map, height_of_map
     im = Image.open(image)
+    width_of_map, height_of_map = im.size
     for line in list_of_lines:
-        draw_line(line[0], line[1], line[2], line[3], im)
+        draw_line(int(line[0]), int(line[1]), int(line[2]), int(line[3]), im)
     im.save(image)
     im.close()
 
@@ -90,9 +92,11 @@ def draw_line(x_st, y_st, x_en, y_en, im):
             y_pr = y
 
 def draw_list_of_circles(list_of_circles, image=final_image):
+    global width_of_map, height_of_map
     im = Image.open(image)
+    width_of_map, height_of_map = im.size
     for circle in list_of_circles:
-        draw_circle(circle[0], circle[1], circle[2], im)
+        draw_circle(int(circle[0]), int(circle[1]), int(circle[2]), im)
     im.save(image)
     im.close()
 
@@ -166,6 +170,10 @@ def draw_map(num_list):
                 highestPoint = intj
             if intj < lowestPoint:
                 lowestPoint = intj
+    highestPoint = highestPoint * 2
+    for i in num_list:
+        for j in i.split('\t'):
+            intj = int(j)
             depth_warning = classify_warning(intj)  # Classify depth
             txt_file.write(depth_warning)  # Write into txt file for dangers
             if x < width_of_map - 1:
@@ -177,7 +185,6 @@ def draw_map(num_list):
             txt_file.write('\n')  # Write into txt file for dangers
         x = 0  # Go back at the end of each line
         y += 1  # Next line
-    highestPoint = highestPoint * 2
     main_im.save(map_image)  # Save images and close all files
     danger_im.save(depth_danger_image)
     main_im.close()

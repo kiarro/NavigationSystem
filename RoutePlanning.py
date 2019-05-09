@@ -81,10 +81,12 @@ def str2Round(str, rounds):
         if x == int(i[0]) and y == int(i[1]):
             return i
     print("Error in str2Round")
-    return numpy.nan
+    return numpy.inf
 
 # this function work only in clockwise direction
 def isArcsCrossed(a1_1, a1_2, a2_1, a2_2): # input vars are numbers
+    if a1_1 == numpy.inf or a1_2 == numpy.inf or a2_1 == numpy.inf or a2_2 == numpy.inf or a1_1 == None or a1_2 == None or a2_1 == None or a2_2 == None:
+        return False
     a1_2 = (a1_2 - a1_1) % (numpy.pi * 2)
     a2_1 = (a2_1 - a1_1) % (numpy.pi * 2)
     a2_2 = (a2_2 - a1_1) % (numpy.pi * 2)
@@ -136,8 +138,10 @@ def lookRoundsIntersections(rounds):
                 continue
             cosa = (r**2+round1[2]**2-round2[2]**2) / 2 / r / round1[2]
             cosb = (r**2-round1[2]**2+round2[2]**2) / 2 / r / round2[2]
-            a = numpy.arccos(cosa)
-            b = numpy.arccos(cosb)
+            if abs(cosa) < 1: a = numpy.arccos(cosa)
+            else: a = 0
+            if abs(cosb) < 1: b = numpy.arccos(cosb)
+            else: b = 0
             if round1[0] == round2[0]:
                 if round1[1] < round2[1]:
                     alpha = numpy.pi/2
@@ -160,6 +164,7 @@ def lookRoundsIntersections(rounds):
         #         intersections[round2Str(i)].pop(round2Str(j))
     return intersections
 
+# reurns string
 def whereClosedByRoundsIntersection(arc):
     global intersections
     round = (arc.x0, arc.y0, arc.r)
@@ -197,7 +202,7 @@ def isCrossed(line, round):
     # Looks where route_line intersect round and if this point is in interval
     solution = opt.fsolve(lambda var: [(var[0] - round[0]) ** 2 + ((var[1] - round[1]) ** 2) - round[2] ** 2,
                                        (var[0] - line[0]) * (line[3] - line[1]) - (var[1] - line[1]) * (
-                                                   line[2] - line[0])], [line[0], line[1]])
+                                                   line[2] - line[0])], [round[0]+round[2], round[1]])
 
     if solution[0] >= line[0] and solution[0] >= line[2] or \
             solution[0] <= line[0] and solution[0] <= line[2] or \
@@ -322,7 +327,7 @@ def clarifyRoute(route, round_array):
 
 # This function walk along the way and skew way if it cross with red zone rounds
 # In such moment they call function that fix route
-def clarifyRouteWithTree(route, round_array):
+def clarifyRouteWithTree(route, rounds):
     num_of_clarify = 0
     previous_arc = route[0]
     arc_number = 0
@@ -353,12 +358,26 @@ def clarifyRouteWithTree(route, round_array):
                 line = (route[arc_number-1].x0 + route[arc_number-1].r * numpy.cos(a_1),
                         route[arc_number-1].y0 + route[arc_number-1].r * numpy.sin(a_1), route[arc_number+1].x0 + route[arc_number+1].r * numpy.cos(a_2),
                         route[arc_number+1].y0 + route[arc_number+1].r * numpy.sin(a_2))
-                if not isCrossed(line, [route[arc_number].x0, route[arc_number].y0, route[arc_number].r]):
+
+                _ = 0
+                round = (arc.x0, arc.y0, arc.r)
+                if isCrossed(line, round):
+                    _ += 1
+                if (round2Str(round) in intersections):
+                    for i in intersections[round2Str(round)]:
+                        if isCrossed(line, str2Round(i, rounds)):
+                            _ += 1
+                if _ == 0:
                     route1[arc_number - 1].a2 = a_1
                     route1[arc_number + 1].a1 = a_2
-                    # print("--")
-                    # return num_of_clarify
                     raise RoutePlanSoftError
+
+                # if not isCrossed(line, [route[arc_number].x0, route[arc_number].y0, route[arc_number].r]):
+                #     route1[arc_number - 1].a2 = a_1
+                #     route1[arc_number + 1].a1 = a_2
+                #     # print("--")
+                #     # return num_of_clarify
+                #     raise RoutePlanSoftError
         except RoutePlanSoftError:
             route1.pop(arc_number)
             return route1, None
@@ -375,43 +394,69 @@ def clarifyRouteWithTree(route, round_array):
         # TODO: check for same rounds in arc and enemy
 
         # look if arc closed by rounds intersection
-        enemy = whereClosedByRoundsIntersection(previous_arc)
+        enemy = whereClosedByRoundsIntersection(arc)
         if not (enemy == None):
             enemy = str2Round(enemy, rounds)
-            route1[arc_number-1].a2 = route1[arc_number-1].a1
-            new_arc1 = Arc(enemy[0], enemy[1], enemy[2], route1[arc_number-1].a1, route1[arc_number-1].a2, Direction.CLOCKWISE)
+            # if enemy == (route1[arc_number+1].x0, route1[arc_number+1].y0, route1[arc_number+1].r):
+            #     a_1_ext, a_2_ext, a_1_int, a_2_int, d1_ext, d2_ext, d1_int, d2_int = createAllCompounds(previous_arc, route1[arc_number+1])
+            #     if (a_1_ext == numpy.inf): return None, None
+            #     if (previous_arc.dir == route1[arc_number+1].dir):
+            #         if (arc.dir == d1_ext):
+            #             previous_arc.a2 = a_1_ext
+            #             route1[arc_number+1].a1 = a_1_ext
+            #         else:
+            #             previous_arc.a2 = a_2_ext
+            #             route1[arc_number+1].a1 = a_2_ext
+            #     elif (not a_1_int == numpy.inf):
+            #         if (arc.dir == d1_int):
+            #             previous_arc.a2 = (a_1_int + numpy.pi) % (2 * numpy.pi)
+            #             route1[arc_number+1].a1 = a_1_int
+            #         else:
+            #             previous_arc.a2 = (a_2_int + numpy.pi) % (2 * numpy.pi)
+            #             route1[arc_number+1].a1 = a_2_int
+            #     else:
+            #         route1 = None
+            #     return route1, None
+            # route1[arc_number-1].a2 = route1[arc_number-1].a1
+            new_arc1 = Arc(enemy[0], enemy[1], enemy[2], arc.a1, arc.a2, arc.dir)
+            new_arc2 = Arc(enemy[0], enemy[1], enemy[2], arc.a1, arc.a2, arc.dir)
 
             a_1_ext, a_2_ext, a_1_int, a_2_int, d1_ext, d2_ext, d1_int, d2_int = createAllCompounds(route1[arc_number-1], new_arc1)
-
-            if (d1_ext == previous_arc.dir):
-                route1[arc_number-1].a2 = a_1_ext
-                new_arc1.a1 = a_1_ext
-                new_arc1.a2 = a_1_ext
-                new_arc1.dir = d1_ext
-                # print("route1[arc_number-1].a2 = {}, new_arc1.a1 = {}, but route1[arc_number-1].a2 = {}, new_arc1.a1 = {}".format(a_1_ext, a_1_ext, route1[arc_number-1].a2, new_arc1.a1))
+            if (a_1_ext == numpy.inf): return None, None
+            if (route1[arc_number-1].dir == new_arc1.dir):
+                if (route1[arc_number-1].dir == d1_ext):
+                    new_arc1.a1 = a_1_ext
+                    route1[arc_number-1].a2 = a_1_ext
+                else:
+                    new_arc1.a1 = a_2_ext
+                    route1[arc_number-1].a2 = a_2_ext
+            elif (not a_1_int == numpy.inf):
+                if (route1[arc_number-1].dir == d1_int):
+                    new_arc1.a1 = (a_1_int + numpy.pi) % (2 * numpy.pi)
+                    route1[arc_number-1].a2 = a_1_int
+                else:
+                    new_arc1.a1 = (a_2_int + numpy.pi) % (2 * numpy.pi)
+                    route1[arc_number-1].a2 = a_2_int
             else:
-                route1[arc_number-1].a2 = a_2_ext
-                new_arc1.a1 = a_2_ext
-                new_arc1.a2 = a_2_ext
-                new_arc1.dir = d2_ext
-                # print("route1[arc_number-1].a2 = {}, new_arc1.a1 = {}, but route1[arc_number-1].a2 = {}, new_arc1.a1 = {}".format(a_2_ext, a_2_ext, route1[arc_number-1].a2, new_arc1.a1))
+                route1 = None
+                return route1, None
 
-            a_1_ext, a_2_ext, a_1_int, a_2_int, d1_ext, d2_ext, d1_int, d2_int = createAllCompounds(new_arc1, arc)
-
-            if (new_arc1.dir == arc.dir):
-                if (arc.dir == d1_ext):
+            a_1_ext, a_2_ext, a_1_int, a_2_int, d1_ext, d2_ext, d1_int, d2_int = createAllCompounds(new_arc1, route1[arc_number+1])
+            if (a_1_ext == numpy.inf): return None, None
+            if (new_arc1.dir == route1[arc_number+1].dir):
+                if (route1[arc_number+1].dir == d1_ext):
                     new_arc1.a2 = a_1_ext
-                    route1[arc_number].a1 = a_1_ext
+                    route1[arc_number+1].a1 = a_1_ext
                 else:
                     new_arc1.a2 = a_2_ext
-                    route1[arc_number].a1 = a_2_ext
-            elif (not a_1_int == numpy.nan):
-                if (arc.dir == d1_int):
+                    route1[arc_number+1].a1 = a_2_ext
+            elif (not a_1_int == numpy.inf):
+                if (route1[arc_number+1].dir == d1_int):
                     new_arc1.a2 = (a_1_int + numpy.pi) % (2 * numpy.pi)
-                    route1[arc_number].a1 = a_1_int
+                    route1[arc_number+1].a1 = a_1_int
                 else:
                     new_arc1.a2 = (a_2_int + numpy.pi) % (2 * numpy.pi)
-                    route1[arc_number].a1 = a_2_int
+                    route1[arc_number+1].a1 = a_2_int
             else:
                 route1 = None
             # a_begin, a_end, direction1, direction2 = createallCompound(route1[arc_number-1], new_arc1)
@@ -427,19 +472,22 @@ def clarifyRouteWithTree(route, round_array):
             # new_arc1.dir = direction1
             # route1[arc_number-1].dir = direction2
 
-            if (not route1 == None): route1.insert(arc_number, new_arc1)
+            if (not route1 == None):
+                route1.pop(arc_number)
+                route1.insert(arc_number, new_arc1)
+
             # print("x = {}, y = {} was added".format(new_arc.x0, new_arc.y0))
-            arc = new_arc1
-            num_of_clarify = num_of_clarify + 1
+            # arc = new_arc1
+            # num_of_clarify = num_of_clarify + 1
             return route1, None
-        enemy = whereClosedByRoundsIntersection(arc)
-        if not (enemy == None):
-            previous_arc = arc
-            arc_number = arc_number + 1
-            continue
+        # enemy = whereClosedByRoundsIntersection(arc)
+        # if not (enemy == None):
+        #     previous_arc = arc
+        #     arc_number = arc_number + 1
+        #     continue
 
         line = (previous_arc.x0+previous_arc.r*numpy.cos(previous_arc.a2), previous_arc.y0+previous_arc.r*numpy.sin(previous_arc.a2), arc.x0+arc.r*numpy.cos(arc.a1), arc.y0+arc.r*numpy.sin(arc.a1))
-        for round in round_array:
+        for round in rounds:
             # Looks if this round is edge of line
             if previous_arc.x0 == round[0] and previous_arc.y0 == round[1] and previous_arc.r == round[2]:
                 continue
@@ -460,69 +508,71 @@ def clarifyRouteWithTree(route, round_array):
             # route2 = route.copy()
 
             # construct tangent
-            print("-------------")
-            print("{},{},{} - {},{},{}".format(previous_arc.x0, previous_arc.y0, previous_arc.r, round[0], round[1], round[2]))
+            # print("-------------")
+            # print("{},{},{} - {},{},{}".format(previous_arc.x0, previous_arc.y0, previous_arc.r, round[0], round[1], round[2]))
             a_1_ext, a_2_ext, a_1_int, a_2_int,  d1_ext, d2_ext, d1_int, d2_int = createAllCompounds(previous_arc, new_arc1)
-            print("a1_ext = {}, a2_ext = {}, a1_int = {}, a2_int = {}, d1 = {}, d2 = {}, d1 = {}, d2 = {}".format(a_1_ext, a_2_ext, a_1_int, a_2_int,  d1_ext, d2_ext, d1_int, d2_int))
+            if (a_1_ext == numpy.inf): return None, None
+            # print("a1_ext = {}, a2_ext = {}, a1_int = {}, a2_int = {}, d1 = {}, d2 = {}, d1 = {}, d2 = {}".format(a_1_ext, a_2_ext, a_1_int, a_2_int,  d1_ext, d2_ext, d1_int, d2_int))
             if (d1_ext == previous_arc.dir):
                 route1[arc_number-1].a2 = a_1_ext
                 new_arc1.a1 = a_1_ext
                 new_arc1.a2 = a_1_ext
                 new_arc1.dir = d1_ext
-                print("route1[arc_number-1].a2 = {}, new_arc1.a1 = {}, but route1[arc_number-1].a2 = {}, new_arc1.a1 = {}".format(a_1_ext, a_1_ext, route1[arc_number-1].a2, new_arc1.a1))
+                # print("route1[arc_number-1].a2 = {}, new_arc1.a1 = {}, but route1[arc_number-1].a2 = {}, new_arc1.a1 = {}".format(a_1_ext, a_1_ext, route1[arc_number-1].a2, new_arc1.a1))
             else:
                 route1[arc_number-1].a2 = a_2_ext
                 new_arc1.a1 = a_2_ext
                 new_arc1.a2 = a_2_ext
                 new_arc1.dir = d2_ext
-                print("route1[arc_number-1].a2 = {}, new_arc1.a1 = {}, but route1[arc_number-1].a2 = {}, new_arc1.a1 = {}".format(a_2_ext, a_2_ext, route1[arc_number-1].a2, new_arc1.a1))
+                # print("route1[arc_number-1].a2 = {}, new_arc1.a1 = {}, but route1[arc_number-1].a2 = {}, new_arc1.a1 = {}".format(a_2_ext, a_2_ext, route1[arc_number-1].a2, new_arc1.a1))
 
-            if (not a_1_int == numpy.nan):
+            if (not a_1_int == numpy.inf):
                 if (d2_int == previous_arc.dir): # use direction for first round of first route which equal to direction for second round for second route
                     route2[arc_number-1].a2 = (a_1_int+numpy.pi)%(numpy.pi*2)
                     new_arc2.a1 = a_1_int
                     new_arc2.a2 = a_1_int
                     new_arc2.dir = d1_int
-                    print("route2[arc_number-1].a2 = {}, new_arc2.a1 = {}, but route2[arc_number-1].a2 = {}, new_arc2.a1 = {}".format((a_1_int+numpy.pi)%(numpy.pi*2), a_1_int, route2[arc_number-1].a2, new_arc2.a1))
+                    # print("route2[arc_number-1].a2 = {}, new_arc2.a1 = {}, but route2[arc_number-1].a2 = {}, new_arc2.a1 = {}".format((a_1_int+numpy.pi)%(numpy.pi*2), a_1_int, route2[arc_number-1].a2, new_arc2.a1))
                 else:
                     route2[arc_number-1].a2 = (a_2_int+numpy.pi)%(numpy.pi*2)
                     new_arc2.a1 = a_2_int
                     new_arc2.a2 = a_2_int
                     new_arc2.dir = d2_int
-                    print("route2[arc_number-1].a2 = {}, new_arc2.a1 = {}, but route2[arc_number-1].a2 = {}, new_arc2.a1 = {}".format((a_2_int+numpy.pi)%(numpy.pi*2), a_2_int, route2[arc_number-1].a2, new_arc2.a1))
+                    # print("route2[arc_number-1].a2 = {}, new_arc2.a1 = {}, but route2[arc_number-1].a2 = {}, new_arc2.a1 = {}".format((a_2_int+numpy.pi)%(numpy.pi*2), a_2_int, route2[arc_number-1].a2, new_arc2.a1))
             else:
                 route2 = None
 
-            print("{},{},{} - {},{},{}".format(new_arc1.x0, new_arc1.y0, new_arc1.r, arc.x0, arc.y0, arc.r))
+            # print("{},{},{} - {},{},{}".format(new_arc1.x0, new_arc1.y0, new_arc1.r, arc.x0, arc.y0, arc.r))
             a_1_ext, a_2_ext, a_1_int, a_2_int, d1_ext, d2_ext, d1_int, d2_int = createAllCompounds(new_arc1, arc)
-            print(
-                "a1_ext = {}, a2_ext = {}, a1_int = {}, a2_int = {}, d1 = {}, d2 = {}, d1 = {}, d2 = {}".format(a_1_ext,
-                                                                                                                a_2_ext,
-                                                                                                                a_1_int,
-                                                                                                                a_2_int,
-                                                                                                                d1_ext,
-                                                                                                                d2_ext,
-                                                                                                                d1_int,
-                                                                                                                d2_int))
+            if (a_1_ext == numpy.inf): return None, None
+            # print(
+            #     "a1_ext = {}, a2_ext = {}, a1_int = {}, a2_int = {}, d1 = {}, d2 = {}, d1 = {}, d2 = {}".format(a_1_ext,
+            #                                                                                                     a_2_ext,
+            #                                                                                                     a_1_int,
+            #                                                                                                     a_2_int,
+            #                                                                                                     d1_ext,
+            #                                                                                                     d2_ext,
+            #                                                                                                     d1_int,
+            #                                                                                                     d2_int))
             if (new_arc1.dir == arc.dir):
                 if (arc.dir == d1_ext):
                     new_arc1.a2 = a_1_ext
                     route1[arc_number].a1 = a_1_ext
-                    print("route1[arc_number].a1 = {}, new_arc1.a2 = {}, but route1[arc_number].a1 = {}, new_arc1.a2 = {}".format(a_1_ext, a_1_ext, route1[arc_number].a1, new_arc1.a2))
+                    # print("route1[arc_number].a1 = {}, new_arc1.a2 = {}, but route1[arc_number].a1 = {}, new_arc1.a2 = {}".format(a_1_ext, a_1_ext, route1[arc_number].a1, new_arc1.a2))
                 else:
                     new_arc1.a2 = a_2_ext
                     route1[arc_number].a1 = a_2_ext
-                    print("route1[arc_number].a1 = {}, new_arc1.a2 = {}, but route1[arc_number].a1 = {}, new_arc1.a2 = {}".format(a_2_ext, a_2_ext, route1[arc_number].a1, new_arc1.a2))
-            elif (not a_1_int == numpy.nan):
+                    # print("route1[arc_number].a1 = {}, new_arc1.a2 = {}, but route1[arc_number].a1 = {}, new_arc1.a2 = {}".format(a_2_ext, a_2_ext, route1[arc_number].a1, new_arc1.a2))
+            elif (not a_1_int == numpy.inf):
                 if (arc.dir == d1_int):
                     new_arc1.a2 = (a_1_int+numpy.pi)%(2*numpy.pi)
                     route1[arc_number].a1 = a_1_int
-                    print("route1[arc_number].a1 = {}, new_arc1.a2 = {}, but route1[arc_number].a1 = {}, new_arc1.a2 = {}".format(a_1_int, (a_1_int+numpy.pi)%(2*numpy.pi), route1[arc_number].a1, new_arc1.a2))
+                    # print("route1[arc_number].a1 = {}, new_arc1.a2 = {}, but route1[arc_number].a1 = {}, new_arc1.a2 = {}".format(a_1_int, (a_1_int+numpy.pi)%(2*numpy.pi), route1[arc_number].a1, new_arc1.a2))
                 else:
                     new_arc1.a2 = (a_2_int+numpy.pi)%(2*numpy.pi)
                     route1[arc_number].a1 = a_2_int
-                    print("route1[arc_number].a1 = {}, new_arc1.a2 = {}, but route1[arc_number].a1 = {}, new_arc1.a2 = {}".format(a_2_int,
-                                                                                (a_2_int+numpy.pi)%(2*numpy.pi), route1[arc_number].a1, new_arc1.a2))
+                    # print("route1[arc_number].a1 = {}, new_arc1.a2 = {}, but route1[arc_number].a1 = {}, new_arc1.a2 = {}".format(a_2_int,
+                    #                                                             (a_2_int+numpy.pi)%(2*numpy.pi), route1[arc_number].a1, new_arc1.a2))
             else:
                 route1 = None
 
@@ -531,21 +581,21 @@ def clarifyRouteWithTree(route, round_array):
                     if (arc.dir == d1_ext):
                         new_arc2.a2 = a_1_ext
                         route2[arc_number].a1 = a_1_ext
-                        print("route2[arc_number].a1 = {}, new_arc2.a2 = {}, but route2[arc_number].a1 = {}, new_arc2.a2 = {}".format(a_1_ext, a_1_ext, route2[arc_number].a1, new_arc2.a2))
+                        # print("route2[arc_number].a1 = {}, new_arc2.a2 = {}, but route2[arc_number].a1 = {}, new_arc2.a2 = {}".format(a_1_ext, a_1_ext, route2[arc_number].a1, new_arc2.a2))
                     else:
                         new_arc2.a2 = a_2_ext
                         route2[arc_number].a1 = a_2_ext
-                        print("route2[arc_number].a1 = {}, new_arc2.a2 = {}, but route2[arc_number].a1 = {}, new_arc2.a2 = {}".format(a_2_ext, a_2_ext, route2[arc_number].a1, new_arc2.a2))
-                elif (not a_1_int == numpy.nan):
+                        # print("route2[arc_number].a1 = {}, new_arc2.a2 = {}, but route2[arc_number].a1 = {}, new_arc2.a2 = {}".format(a_2_ext, a_2_ext, route2[arc_number].a1, new_arc2.a2))
+                elif (not a_1_int == numpy.inf):
                     if (arc.dir == d1_int):
                         new_arc2.a2 = (a_1_int + numpy.pi) % (2 * numpy.pi)
                         route2[arc_number].a1 = a_1_int
-                        print("route2[arc_number].a1 = {}, new_arc2.a2 = {}, but route2[arc_number].a1 = {}, new_arc2.a2 = {}".format(a_1_int, (a_1_int + numpy.pi) % (2 * numpy.pi), route2[arc_number].a1, new_arc2.a2))
+                        # print("route2[arc_number].a1 = {}, new_arc2.a2 = {}, but route2[arc_number].a1 = {}, new_arc2.a2 = {}".format(a_1_int, (a_1_int + numpy.pi) % (2 * numpy.pi), route2[arc_number].a1, new_arc2.a2))
                     else:
                         new_arc2.a2 = (a_2_int + numpy.pi) % (2 * numpy.pi)
                         route2[arc_number].a1 = a_2_int
-                        print("route2[arc_number].a1 = {}, new_arc2.a2 = {}, but route2[arc_number].a1 = {}, new_arc2.a2 = {}".format(a_2_int, (a_2_int + numpy.pi) % (
-                                    2 * numpy.pi), route2[arc_number].a1, new_arc2.a2))
+                        # print("route2[arc_number].a1 = {}, new_arc2.a2 = {}, but route2[arc_number].a1 = {}, new_arc2.a2 = {}".format(a_2_int, (a_2_int + numpy.pi) % (
+                        #             2 * numpy.pi), route2[arc_number].a1, new_arc2.a2))
                 else:
                     route2 = None
 
@@ -630,7 +680,7 @@ def createAllCompounds(arc1, arc2):
         #     a1_internal, a2_internal = (a1_internal+numpy.pi)%(numpy.pi*2), (a2_internal+numpy.pi)%(numpy.pi*2)
         #     a1_dir_int = Direction(a1_dir_ext.value % 2 + 1)
     else:
-        a1_internal, a2_internal = numpy.nan, numpy.nan
+        a1_internal, a2_internal = numpy.inf, numpy.inf
         a1_dir_int = Direction.CLOCKWISE
     # print("a1_ext = {}, a2_ext = {}, a1_int = {}, a2_int = {}".format(a1_external, a2_external, a1_internal, a2_internal))
 
@@ -666,7 +716,7 @@ def createTangent(XA, YA, X0, Y0, R):
         return (b+a)%(numpy.pi*2), (b-a)%(numpy.pi*2)
     except Exception as err:
         print("Error in createTangent: {}-{}, {}-{}".format(X0, Y0, XA, YA))
-        return numpy.nan, numpy.nan
+        return numpy.inf, numpy.inf
 
 # main function that create route throuth field
 def CreateRouteByTangents(startX, startY, endX, endY, width, height, red_zone):
@@ -698,9 +748,10 @@ def CreateRouteByTangents(startX, startY, endX, endY, width, height, red_zone):
     return pointed_route
 
 
-def CreateRouteByTangentTree(startX, startY, endX, endY, width, height, red_zone):
+def CreateTangentTree(startX, startY, endX, endY, width, height, red_zone):
     try:
-        global good_routes
+        global good_routes, max_depth_of_tree
+        max_depth_of_tree = 1
         good_routes = list()
         pointed_route = list()
         pointed_route.append(Arc(startX, startY, 0, 0, 0, Direction.CONTERCW))
@@ -722,39 +773,40 @@ def CreateRouteByTangentTree(startX, startY, endX, endY, width, height, red_zone
         # next code do normal (I hope) route
         global j
         j = 0
-        def a(tree, parent = None):
-            global j, good_routes
+        def a(tree, parent = None, current_depth_of_tree = 1):
+            global j, good_routes, max_depth_of_tree
+            if current_depth_of_tree>max_depth_of_tree: max_depth_of_tree = current_depth_of_tree
             if (tree == None):
-                log_file.write("------\nThis is deadlock path\n------\n")
+                # log_file.write("------\nThis is deadlock path\n------\n")
                 return None
             newTree = Tree(tree, None, None, parent)
             route1, route2 = clarifyRouteWithTree(tree, red_zone)
             if newTree.isInTreeBefore(tree):
-                log_file.write("------\nThis is deadlock path. It was yet\n------\n")
+                # log_file.write("------\nThis is deadlock path. It was yet\n------\n")
                 return newTree
             for _ in good_routes:
                 if _.isValueEqualTo(tree):
-                    log_file.write("------\nThis is deadlock path. It was yet\n------\n")
+                    # log_file.write("------\nThis is deadlock path. It was yet\n------\n")
                     return newTree
                 if _.isInTreeBefore(tree):
-                    log_file.write("------\nThis is deadlock path. It was yet\n------\n")
+                    # log_file.write("------\nThis is deadlock path. It was yet\n------\n")
                     return newTree
             # printroute(tree)
 
             if (route1 == "end"):
                 k = Tree(tree, None, None, parent)
                 good_routes.append(k)
-                log_file.write("------\nThis is good path\n------\n")
-                printroute(tree)
-                log_file.write("---------------------\n")
-                drawRoute(tree, rounds, i=j)
+                # log_file.write("------\nThis is good path\n------\n")
+                # printroute(tree)
+                # log_file.write("---------------------\n")
+                drawRouteInFile(tree, red_zone, i=j, width=width, height=height)
                 j += 1
                 return k
-            printroute(tree)
-            log_file.write("---------------------\n")
+            # printroute(tree)
+            # log_file.write("---------------------\n")
 
-            newTree.left = a(route1, newTree)
-            newTree.right = a(route2, newTree)
+            newTree.left = a(route1, newTree, current_depth_of_tree=current_depth_of_tree+1)
+            newTree.right = a(route2, newTree, current_depth_of_tree=current_depth_of_tree+1)
             # newTree = Tree(tree, a(route1), a(route2))
             # if not (newTree.left == None or newTree.left == "end"): newTree.left.parent = newTree
             # if not (newTree.right == None or newTree.right == "end"): newTree.right.parent = newTree
@@ -772,13 +824,25 @@ def CreateRouteByTangentTree(startX, startY, endX, endY, width, height, red_zone
         route_tree = None
     return route_tree
 
+def CreateRouteByTangentTree(startX, startY, endX, endY, width, height, red_zone):
+    lookRoundsIntersections(red_zone)
+    tree = CreateTangentTree(startX, startY, endX, endY, width, height, red_zone)
+    if tree == None:
+        tree = list()
+        tree.append(Arc(startX, startY, 0, 0, 0, Direction.CONTERCW))
+        tree.append(Arc(endX, endY, 0, 0, 0, Direction.CONTERCW))
+        return tree
+    global good_routes
+    # TODO: choose brilliant path from all created pathes
+    return good_routes[0].value
+
 def printroute(route):
-    log_file.write("Strart route\n")
+    log_file.write("Start route\n")
     for i in route:
         log_file.write("x = {}, y = {}, r = {}, a1 = {}, a2 = {}, dir = {}\n".format(i.x0, i.y0, i.r, i.a1, i.a2, i.dir))
     log_file.write("End route\n")
 
-def drawRoute(route, rounds, width=600, height=600, i=0):
+def drawRouteInFile(route, rounds, width=600, height=600, i=0):
     name = "Debug_img_{}.png".format(i)
     print(name)
     Graph.createImageFile(name, width, height)
@@ -794,12 +858,90 @@ def drawRoute(route, rounds, width=600, height=600, i=0):
             i_pr = i
         Graph.draw_list_of_lines(lines, image=name)
 
+def drawRouteInBigImage(route, rounds0, name, width=600, height=600, x0 = 0, y0 = 0):
+    _ = 0
+    rounds = rounds0.copy()
+    for i in rounds:
+        rounds[_] = (i[0]+x0, i[1]+y0, i[2])
+        _ += 1
+    Graph.draw_list_of_circles(rounds, image=name)
+    if len(route) > 0:
+        lines = list()
+        i_pr = route[0]
+        for i in route:
+            lines.append([(int)(i_pr.x0 + (i_pr.r + 0.51) * numpy.cos(i_pr.a2)+x0),
+                          (int)(i_pr.y0 + (i_pr.r + 0.51) * numpy.sin(i_pr.a2)+y0),
+                          (int)(i.x0 + (i.r + 0.51) * numpy.cos(i.a1)+x0), (int)(i.y0 + (i.r + 0.51) * numpy.sin(i.a1)+y0)])
+            i_pr = i
+        Graph.draw_list_of_lines(lines, image=name)
+
+def drawTree(depth, rounds, leaf_width=600, leaf_height=600):
+    global num_line
+    num_line = 0
+    name = "Debug_img_tree.png"
+    print(name)
+    height = (leaf_height + 50) * (depth + 1)
+    width = (leaf_width + 50) * (2**(depth - 1))
+    Graph.createImageFile(name, width, height)
+    log_file = open("log.txt", "r+")
+    content_lines = log_file.readlines()
+    # left top corner
+    x = width/2 - leaf_width/2
+    y = 25
+    def a(x, y, img, content, width, height, depth_gap):
+        global num_line
+        good_path = False
+        lines = list()
+        content_line = content[num_line]
+        while (not content_line == "Start route\n"):
+            if content_line == "This is good path\n":
+                good_path = True
+            if content_line == "This is deadlock path. It was yet\n" or content_line == "This is deadlock path":
+                return None
+            num_line += 1
+            content_line = content[num_line]
+        num_line += 1
+        content_line = content[num_line]
+        # i_pr = Arc(0, 0, 0, 0, 0, Direction.CONTERCW)
+        while (not content_line == "End route\n"):
+            parts = content_line.split(" ")
+            i = Arc(0, 0, 0, 0, 0, Direction.CONTERCW)
+            i.x0 = float(parts[2].split(",")[0])
+            i.y0 = float(parts[5].split(",")[0])
+            i.r = float(parts[8].split(",")[0])
+            _ = parts[11].split(",")[0]
+            if (_ == "inf"):
+                return None
+            i.a1 = float(_)
+            _ = parts[14].split(",")[0]
+            if (_ == "inf"):
+                return None
+            i.a2 = float(_)
+            lines.append(i)
+            # lines.append([(int)(i_pr.x0 + (i_pr.r + 0.51) * numpy.cos(i_pr.a2)),
+            #               (int)(i_pr.y0 + (i_pr.r + 0.51) * numpy.sin(i_pr.a2)),
+            #               (int)(i.x0 + (i.r + 0.51) * numpy.cos(i.a1)),
+            #               (int)(i.y0 + (i.r + 0.51) * numpy.sin(i.a1))])
+            # i_pr = i
+            num_line += 1
+            content_line = content[num_line]
+        drawRouteInBigImage(lines, rounds, img, x0=x, y0=y)
+        if good_path:
+            return None
+        a((x+width/2)-depth_gap/2-width/2, y+50+height, img, content, width, height, depth_gap=depth_gap/2)
+        a((x+width/2)+depth_gap/2-width/2, y+50+height, img, content, width, height, depth_gap=depth_gap/2)
+        return None
+    a(x, y, name, content_lines, leaf_width, leaf_height, depth_gap=width/2)
+    log_file.close()
+
+
 if __name__ == "__main__":
     def test_with_log():
-        global log_file, route
+        global log_file, route, max_depth_of_tree
         log_file = open("log.txt", "w+")
         route = CreateRouteByTangentTree(x_start, y_start, x_end, y_end, width, height, rounds)
         log_file.close()
+        drawTree(max_depth_of_tree, rounds)
     def test_without_log():
         route = CreateRouteByTangents(x_start, y_start, x_end, y_end, width, height, rounds)
         for i in route:
@@ -808,9 +950,9 @@ if __name__ == "__main__":
 
     Graph.set_parameters(width=600, height=600)
     # route = [Arc(0,0,0,0,0,Direction.CONTERCW),Arc(599,599,0,0,0,Direction.CONTERCW)]
-    rounds = [(85,80,6), (15, 16, 9), (50, 0, 8), (60, 62, 4), (200, 100, 85), (400, 360, 76), (500, 100, 50), (560, 540, 15), (380, 350, 6), (200, 280, 30), (360, 450, 100), (500, 400, 60)]
+    # rounds = [(85,80,6), (15, 16, 9), (50, 0, 8), (60, 62, 4), (200, 100, 85), (400, 360, 76), (500, 100, 50), (560, 540, 15), (380, 350, 6), (200, 280, 30), (360, 450, 100), (500, 400, 60)]
     # rounds = [(90, 60, 20), (150, 150, 30), (500, 540, 50), (300, 340, 60)]
-    # rounds = [(200, 0, 20), (200, 20, 20), (200, 50, 20), (200, 80, 20), (200, 100, 20), (200, 110, 20), (200, 145, 20), (200, 160, 20), (210, 180, 20), (200, 200, 20), (200, 235, 20), (195, 265, 20), (200, 300, 20)]
+    rounds = [(200, 0, 20), (200, 20, 20), (200, 50, 20), (200, 80, 20), (200, 100, 20), (200, 110, 20), (200, 145, 20), (200, 160, 20), (210, 180, 20), (200, 200, 20), (200, 235, 20), (195, 265, 20), (200, 300, 20)]
     # rounds = [(100, 100, 10), (200,200,20)]
     # rounds = [(100,100,10), (200,200,20), (400, 350, 100)]
 
@@ -830,6 +972,7 @@ if __name__ == "__main__":
     width, height = 600, 600
 
     test_with_log()
+
     # route = CreateRouteByTangents(x_start,y_start,x_end,y_end,width,height,rounds)
     # route = CreateRouteByTangentTree(x_start, y_start, x_end, y_end, width, height, rounds)
     # printroute(route)

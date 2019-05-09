@@ -17,7 +17,7 @@ coordinates = [0, 0, 999, 999]
 
 def btn_route():
 
-    route = RoutePlanning.CreateRouteByTangents(coordinates[0], coordinates[1], coordinates[2], coordinates[3], map_width,
+    route = RoutePlanning.CreateRouteByTangentTree(coordinates[0], coordinates[1], coordinates[2], coordinates[3], map_width,
                                       map_height, circle_array)
     print("Task complete: route was planed.")
 

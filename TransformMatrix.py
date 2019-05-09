@@ -121,9 +121,9 @@ def launch(i,j):
 # create circumference around area which contains this dot
 def circle(i,j, width, height):
     spisok_border = list()
-    sum_X=0
-    sum_Y=0
-    N=0
+    sum_X=i
+    sum_Y=j
+    N=1
     spisok = [i,j]
     tohka = mas[i][j]
     while(len(spisok)>0):
@@ -147,12 +147,12 @@ def circle(i,j, width, height):
             else:
                 if spanUp==1 and x>0 and mas[x-1][y] !=tohka:
                     spanUp = 0
-            if spanDown==0 and x<width and mas[x+1][y]==tohka:
+            if spanDown==0 and x<width-1 and mas[x+1][y]==tohka:
                 spisok.append(x+1)
                 spisok.append(y)
                 spanDown=1
             else:
-                if spanDown==1 and x<width and mas[x+1][y]!=tohka:
+                if spanDown==1 and x<width-1 and mas[x+1][y]!=tohka:
                     spanDown=0
             mas[x][y]+=tohka
             if (y<height-1):
