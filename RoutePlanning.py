@@ -14,6 +14,8 @@ import copy
 
 eps = 0.0001
 
+is_log_on = False
+
 class Direction(Enum):
     CONTERCW = 1
     CLOCKWISE = 2
@@ -664,7 +666,8 @@ def createAllCompounds(arc1, arc2):
         dir_for = 2
     # find angles of point of contact of a circle and an external tangent
     a1_external, a2_external = createTangent(x_external, y_external, x0_external, y0_external, r_external) # External tangent
-    if a1_external - a2_external < a2_external - a1_external:
+    # if a1_external - a2_external < a2_external - a1_external:
+    if dir_for == 1:
         a1_dir_ext = Direction.CONTERCW
     else:
         a1_dir_ext = Direction.CLOCKWISE
@@ -672,10 +675,11 @@ def createAllCompounds(arc1, arc2):
     if arc1.r + arc2.r < numpy.sqrt((arc1.x0 - arc2.x0)**2 + (arc1.y0 - arc2.y0)**2):
         # find angle for second round of point of contact of a circle and an internal tangent. For that angle of point for first round you can do: a + 180
         a1_internal, a2_internal = createTangent(arc1.x0, arc1.y0, arc2.x0, arc2.y0, arc1.r + arc2.r)  # Internal tangent
-        if a1_internal - a2_internal < a2_internal - a1_internal:
-            a1_dir_int = Direction.CONTERCW # direction for ferst angle for second round
-        else:
-            a1_dir_int = Direction.CLOCKWISE
+        a1_dir_int = Direction.CLOCKWISE
+        # if a1_internal - a2_internal < a2_internal - a1_internal:
+        #     a1_dir_int = Direction.CONTERCW # direction for ferst angle for second round
+        # else:
+        #     a1_dir_int = Direction.CLOCKWISE
         # if dir_for == 1:
         #     a1_internal, a2_internal = (a1_internal+numpy.pi)%(numpy.pi*2), (a2_internal+numpy.pi)%(numpy.pi*2)
         #     a1_dir_int = Direction(a1_dir_ext.value % 2 + 1)
@@ -725,6 +729,7 @@ def CreateRouteByTangents(startX, startY, endX, endY, width, height, red_zone):
         pointed_route.append(Arc(startX, startY, 0, 0, 0, Direction.CONTERCW))
         pointed_route.append(Arc(endX, endY, 0, 0, 0, Direction.CONTERCW))
         red_zone = sorted(red_zone, key=lambda round: round[2], reverse=True)
+        red_zone = normalizeRounds(red_zone)
         if startX < 0 or startX > width or startY < 0 or startY > height:
             raise MainPointInBadZoneError("Start point lay outside map")
         if endX < 0 or endX > width or endY < 0 or endY > height:
@@ -757,7 +762,7 @@ def CreateTangentTree(startX, startY, endX, endY, width, height, red_zone):
         pointed_route.append(Arc(startX, startY, 0, 0, 0, Direction.CONTERCW))
         pointed_route.append(Arc(endX, endY, 0, 0, 0, Direction.CONTERCW))
         route_tree = pointed_route
-        red_zone = sorted(red_zone, key=lambda round: round[2], reverse=True)
+        # red_zone = sorted(red_zone, key=lambda round: round[2], reverse=True)
         if startX < 0 or startX > width or startY < 0 or startY > height:
             raise MainPointInBadZoneError("Start point lay outside map")
         if endX < 0 or endX > width or endY < 0 or endY > height:
@@ -777,33 +782,35 @@ def CreateTangentTree(startX, startY, endX, endY, width, height, red_zone):
             global j, good_routes, max_depth_of_tree
             if current_depth_of_tree>max_depth_of_tree: max_depth_of_tree = current_depth_of_tree
             if (tree == None):
-                # log_file.write("------\nThis is deadlock path\n------\n")
+                if is_log_on: log_file.write("------\nThis is deadlock path\n------\n")
                 return None
             newTree = Tree(tree, None, None, parent)
             route1, route2 = clarifyRouteWithTree(tree, red_zone)
             if newTree.isInTreeBefore(tree):
-                # log_file.write("------\nThis is deadlock path. It was yet\n------\n")
+                if is_log_on: log_file.write("------\nThis is deadlock path. It was yet\n------\n")
                 return newTree
             for _ in good_routes:
                 if _.isValueEqualTo(tree):
-                    # log_file.write("------\nThis is deadlock path. It was yet\n------\n")
+                    if is_log_on: log_file.write("------\nThis is deadlock path. It was yet\n------\n")
                     return newTree
                 if _.isInTreeBefore(tree):
-                    # log_file.write("------\nThis is deadlock path. It was yet\n------\n")
+                    if is_log_on: log_file.write("------\nThis is deadlock path. It was yet\n------\n")
                     return newTree
-            # printroute(tree)
+            # if is_log_on: printroute(tree)
 
             if (route1 == "end"):
                 k = Tree(tree, None, None, parent)
                 good_routes.append(k)
-                # log_file.write("------\nThis is good path\n------\n")
-                # printroute(tree)
-                # log_file.write("---------------------\n")
+                if is_log_on:
+                    log_file.write("------\nThis is good path\n------\n")
+                    printroute(tree)
+                    log_file.write("---------------------\n")
                 drawRouteInFile(tree, red_zone, i=j, width=width, height=height)
                 j += 1
                 return k
-            # printroute(tree)
-            # log_file.write("---------------------\n")
+            if is_log_on:
+                printroute(tree)
+                log_file.write("---------------------\n")
 
             newTree.left = a(route1, newTree, current_depth_of_tree=current_depth_of_tree+1)
             newTree.right = a(route2, newTree, current_depth_of_tree=current_depth_of_tree+1)
@@ -825,6 +832,9 @@ def CreateTangentTree(startX, startY, endX, endY, width, height, red_zone):
     return route_tree
 
 def CreateRouteByTangentTree(startX, startY, endX, endY, width, height, red_zone):
+    log_on()
+    red_zone = sorted(red_zone, key=lambda round: round[2], reverse=True)
+    red_zone = normalizeRounds(red_zone)
     lookRoundsIntersections(red_zone)
     tree = CreateTangentTree(startX, startY, endX, endY, width, height, red_zone)
     if tree == None:
@@ -832,6 +842,8 @@ def CreateRouteByTangentTree(startX, startY, endX, endY, width, height, red_zone
         tree.append(Arc(startX, startY, 0, 0, 0, Direction.CONTERCW))
         tree.append(Arc(endX, endY, 0, 0, 0, Direction.CONTERCW))
         return tree
+    global log_file
+    if is_log_on: log_file.close()
     global good_routes
     # TODO: choose brilliant path from all created pathes
     return good_routes[0].value
@@ -934,6 +946,10 @@ def drawTree(depth, rounds, leaf_width=600, leaf_height=600):
     a(x, y, name, content_lines, leaf_width, leaf_height, depth_gap=width/2)
     log_file.close()
 
+def log_on():
+    global log_file, route, max_depth_of_tree, is_log_on
+    log_file = open("log.txt", "w+")
+    is_log_on = True
 
 if __name__ == "__main__":
     def test_with_log():
