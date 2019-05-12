@@ -304,7 +304,15 @@ class Windows():
     main_window = None
     set_color_window = None
 
-class Main(tk.Frame):
+def startThis(root):
+    global flags, variables, windows, app
+    flags = Flags()
+    variables = Variables()
+    windows = Windows()
+    app = Main(root)
+
+
+class Main(tk.Toplevel):
     def __init__(self, root):
         super().__init__(root)
         self.init_main()
@@ -312,7 +320,10 @@ class Main(tk.Frame):
     def init_main(self):
         windows.main_window = self
 
-        self.toolbar = tk.Frame(bg="#d7d8e0", bd=2, height=140, width=140)
+        self.title("Map Refactor")
+        self.geometry("1024x800+200+100")
+
+        self.toolbar = tk.Frame(self, bg="#d7d8e0", bd=2, height=140, width=140)
 
         self.toolbar.pack(side=tk.TOP, fill=tk.X)
 
@@ -336,16 +347,18 @@ class Main(tk.Frame):
                                     bg="#d7d8e0", bd=0, compound=tk.TOP, image=self.filter_img)
         self.btn_filter.pack(side=tk.LEFT)
 
-        self.canvas = Canvas(root, height=984, width=800, scrollregion=(0,0,variables.image_width,variables.image_height))
-        self.hbar = Scrollbar(root, orient=HORIZONTAL)
+        self.canvas = Canvas(self, height=984, width=800, scrollregion=(0,0,variables.image_width,variables.image_height))
+        self.hbar = Scrollbar(self, orient=HORIZONTAL)
         self.hbar.pack(side=BOTTOM, fill=X)
         self.hbar.config(command=self.canvas.xview)
-        self.vbar = Scrollbar(root, orient=VERTICAL)
+        self.vbar = Scrollbar(self, orient=VERTICAL)
         self.vbar.pack(side=RIGHT, fill=Y)
         self.vbar.config(command=self.canvas.yview)
         self.canvas.config(xscrollcommand=self.hbar.set, yscrollcommand=self.vbar.set)
         self.canvas.pack(side=tk.TOP, fill=BOTH)
         self.canvas.bind("<Button-1>", self.mouse1_handler)
+
+        # self.mainloop()
 
     def open_image(self):
         # Tk().withdraw()
@@ -528,14 +541,19 @@ class Dialog_to_choose_color(tk.Toplevel):
 
 if __name__ == "__main__":
     root = tk.Tk()
-    flags = Flags()
-    variables = Variables()
-    windows = Windows()
-    app = Main(root)
-    app.pack()
-    root.title("Map Refactor")
+    root.title("Map Refactor Root")
     root.geometry("1024x800+200+100")
 
+    startThis(root)
     root.mainloop()
+    # flags = Flags()
+    # variables = Variables()
+    # windows = Windows()
+    # app = Main(root)
+    # app.pack()
+    # root.title("Map Refactor")
+    # root.geometry("1024x800+200+100")
+
+    # root.mainloop()
 
 

@@ -9,14 +9,20 @@ import numpy
 import Graph
 import TransformMatrix
 import RoutePlanning
+import MapRefactor
 
 picture = 'inception'  # глобальные переменные для имени картинки в главном окне
 old_picture = '0'
 txt_file_with_danger_of_heights = "DepthDangerZone.txt"
 coordinates = [0, 0, 999, 999]
+maxdep = 200
+mindep = 50
+# root = None
+
+def btn_openMapRefactor():
+    MapRefactor.startThis(root)
 
 def btn_route():
-
     route = RoutePlanning.CreateRouteByTangentTree(coordinates[0], coordinates[1], coordinates[2], coordinates[3], map_width,
                                       map_height, circle_array)
     print("Task complete: route was planed.")
@@ -37,51 +43,107 @@ def btn_parametrs():  # окно для параметров
         global maxdep, mindep,coordinates
         maxdep = int(win_1.get())  # ввод значений
         mindep = int(win_2.get())
-        xyxy = win_3.get()
-        coordinates = xyxy.split()
-        coordinates[0] = int(coordinates[0])
-        coordinates[1] = int(coordinates[1])
-        coordinates[2] = int(coordinates[2])
-        coordinates[3] = int(coordinates[3])
+        coordinates[0] = int(win_x1.get())
+        coordinates[1] = int(win_y1.get())
+        coordinates[2] = int(win_x2.get())
+        coordinates[3] = int(win_y2.get())
 
     def setDefault():
         global maxdep, mindep,coordinates
-
+        win_1.insert(0, str(maxdep))
+        win_2.insert(0, str(mindep))
+        win_x1.insert(0, str(coordinates[0]))
+        win_y1.insert(0, str(coordinates[1]))
+        win_x2.insert(0, str(coordinates[2]))
+        win_y2.insert(0, str(coordinates[3]))
 
     def close_window():  # закрытие окна по кнопке ok
         window.destroy()
 
-    def btn_func():
+    def btn_ok_func():
         vvod()
         close_window()
 
+    def btn_cancel_func():
+        close_window()
+
     window = Tk()
-    window.geometry("300x150")    #300x100 на 300х150
+    window.geometry("300x130")    #300x100 на 300х150
     window.resizable(width=False, height=False)
 
-    t1 = Label(window, text='Enter max depth, please')
+    window.columnconfigure(0, pad=20)
+    window.columnconfigure(1, pad=20)
+    window.columnconfigure(2, pad=0)
+    window.columnconfigure(3, pad=0)
+    window.columnconfigure(4, pad=0)
+    window.columnconfigure(5, pad=0)
+    window.rowconfigure(0, pad=3)
+    window.rowconfigure(1, pad=3)
+    window.rowconfigure(2, pad=3)
+    window.rowconfigure(3, pad=3)
+    window.rowconfigure(4, pad=20)
+
+    t1 = Label(window, text='Max depth')
     t1.config(font=('Verdana', 8))
-    t1.pack()
+    t1.grid(row=0, column=0)
 
-    win_1 = Entry(window, width=20)
-    win_1.pack()
+    win_1 = Entry(window, width=8)
+    win_1.grid(row=1, column=0)
 
-    t2 = Label(window, text='Enter min depth, please')
+    t2 = Label(window, text='Min depth')
     t2.config(font=('Verdana', 8))
-    t2.pack()
+    t2.grid(row=2, column=0)
 
-    win_2 = Entry(window, width=20)
-    win_2.pack()
+    win_2 = Entry(window, width=8)
+    win_2.grid(row=3, column=0)
 
-    t3 = Label(window, text='Xmin Ymin Xmax Ymax')
-    t3.config(font=('Verdana', 8))
-    t3.pack()
+    t_Points = Label(window, text="Points")
+    t_Points.config(font=('Verdana', 8))
+    t_Points.grid(row=0, column=1, columnspan=4)
 
-    win_3 = Entry(window, width=20)
-    win_3.pack()
+    t_Point1 = Label(window, text="Start = [")
+    t_Point1.config(font=('Verdana', 8))
+    t_Point1.grid(row=1, column=1)
 
-    btn = Button(window, text='ok', command=btn_func)
-    btn.pack()
+    win_x1 = Entry(window, width=8)
+    win_x1.grid(row=1, column=2)
+
+    t_G1 = Label(window, text=";")
+    t_G1.config(font=('Verdana', 8))
+    t_G1.grid(row=1, column=3)
+
+    win_y1 = Entry(window, width=8)
+    win_y1.grid(row=1, column=4)
+
+    t_E1 = Label(window, text="]")
+    t_E1.config(font=('Verdana', 8))
+    t_E1.grid(row=1, column=5)
+
+    t_Point2 = Label(window, text="  End = [")
+    t_Point2.config(font=('Verdana', 8))
+    t_Point2.grid(row=2, column=1)
+
+    win_x2 = Entry(window, width=8)
+    win_x2.grid(row=2, column=2)
+
+    t_G2 = Label(window, text=";")
+    t_G2.config(font=('Verdana', 8))
+    t_G2.grid(row=2, column=3)
+
+    win_y2 = Entry(window, width=8)
+    win_y2.grid(row=2, column=4)
+
+    t_E2 = Label(window, text="]")
+    t_E2.config(font=('Verdana', 8))
+    t_E2.grid(row=2, column=5)
+
+    setDefault()
+
+    btn_cancel = Button(window, text='cancel', command=btn_cancel_func)
+    btn_cancel.grid(row=4, column=0, columnspan=2)
+
+    btn_ok = Button(window, text='ok', command=btn_ok_func)
+    btn_ok.grid(row=4, column=2, columnspan=4)
 
 
 def btn_fail():  # окно для файла
@@ -155,11 +217,14 @@ class Menu(Frame):  # меню
         routebtn = Button(self, text="Построить маршрут", height=1, width=20, command=btn_route)
         routebtn.grid(row=5, column=0)
 
+        refactbtn = Button(self, text="JPEG -> Matrix", height=1, width=20, command=btn_openMapRefactor)
+        refactbtn.grid(row=8, column=0)
+
         lbl2 = Label(self, text="Просмотр результатов:")
-        lbl2.grid(row=6, column=0)  # надпись перед выпадающей кнопкой
+        lbl2.grid(row=10, column=0)  # надпись перед выпадающей кнопкой
 
         lbl3 = Label(self)  # область под выпадающую кнопку
-        lbl3.grid(row=7, column=0)
+        lbl3.grid(row=11, column=0)
 
         # выпадающая кнопка
         c = ttk.Combobox(lbl3, width=21)           #width=21 для  Windows 10
@@ -174,12 +239,18 @@ class Menu(Frame):  # меню
 
         c.bind("<<ComboboxSelected>>", fun)  # считывание значения из выпадающей кнопки
 
-# main создаем главное окно
-root = Tk()
-root.geometry("1000x500+100+100")
-root.resizable(width=False, height=False)  # убирает возможностть масштабирования окна
+if __name__ == "__main__":
+    # main создаем главное окно
+    global root
+    root = Tk()
+    root.geometry("1000x500+100+100")
+    root.title("SeaNavigationSystem")
+    root.resizable(width=False, height=False)  # убирает возможностть масштабирования окна
 
-a = Menu(root)
-b = Drawn_fail(root)
+    a = Menu(root)
+    b = Drawn_fail(root)
 
-root.mainloop()
+    a.pack(side=LEFT)
+    b.pack(side=RIGHT)
+
+    root.mainloop()
