@@ -1,7 +1,3 @@
-# I must look at internal angles for finding rigth using of it
-
-
-
 # angles are deposited clockwise from the direction right??
 
 # always: CCW - CW < 180 < CW - CCW
@@ -51,6 +47,10 @@ class Tree():
                 return False
         return True
 
+class GraphRoundVertex():
+    def __init__(self, this, links):
+        self.vertex = this
+        self.links = links # [(vertex, distance, this angle)]
 
 class Arc():
     def __init__(self, X0, Y0, R, A1, A2, DIR):
@@ -125,6 +125,17 @@ def normalizeRounds(rounds):
         # if (_[i]):
         #     rounds.pop(i)
     return rounds
+
+def distanceBetweenRoundPoits(round1, a1, round2, a2):
+    x1 = round1[0] + numpy.sin(a1) * round1[2]
+    y1 = round1[1] + numpy.cos(a1) * round1[2]
+    x2 = round2[0] + numpy.sin(a2) * round2[2]
+    y2 = round2[1] + numpy.cos(a2) * round2[2]
+    d = numpy.sqrt((x1-x2)**2+(y1-y2)**2)
+    return d
+
+def lenthOfArc(r, a1, a2):
+    return ((a2 - a1)%(2*numpy.pi))*r
 
 def lookRoundsIntersections(rounds):
     global intersections
@@ -676,13 +687,6 @@ def createAllCompounds(arc1, arc2):
         # find angle for second round of point of contact of a circle and an internal tangent. For that angle of point for first round you can do: a + 180
         a1_internal, a2_internal = createTangent(arc1.x0, arc1.y0, arc2.x0, arc2.y0, arc1.r + arc2.r)  # Internal tangent
         a1_dir_int = Direction.CLOCKWISE
-        # if a1_internal - a2_internal < a2_internal - a1_internal:
-        #     a1_dir_int = Direction.CONTERCW # direction for ferst angle for second round
-        # else:
-        #     a1_dir_int = Direction.CLOCKWISE
-        # if dir_for == 1:
-        #     a1_internal, a2_internal = (a1_internal+numpy.pi)%(numpy.pi*2), (a2_internal+numpy.pi)%(numpy.pi*2)
-        #     a1_dir_int = Direction(a1_dir_ext.value % 2 + 1)
     else:
         a1_internal, a2_internal = numpy.inf, numpy.inf
         a1_dir_int = Direction.CLOCKWISE
@@ -848,6 +852,211 @@ def CreateRouteByTangentTree(startX, startY, endX, endY, width, height, red_zone
     # TODO: choose brilliant path from all created pathes
     return good_routes[0].value
 
+def createGraphWithRounds(rounds):
+    graph = dict()
+    for round1 in rounds:
+        graph.setdefault(round2Str(round1) + "CCW",
+                         [round1[2], dict()])  # [ext/CCW, int/CCW] // directions for this round
+        graph.setdefault(round2Str(round1) + "CWS",
+                         [round1[2], dict()])  # [ext/CW, int/CW] // directions for this round
+    for round1 in rounds:
+
+        arc1 = Arc(round1[0], round1[1], round1[2], 0, 0, Direction.CLOCKWISE)
+        upTriangle = False
+        for round2 in rounds:
+            if (round1 == round2): upTriangle = True
+            if not upTriangle: continue
+            arc2 = Arc(round2[0], round2[1], round2[2], 0, 0, Direction.CLOCKWISE)
+            a_1_ext, a_2_ext, a_1_int, a_2_int, d1_ext, d2_ext, d1_int, d2_int = createAllCompounds(arc1, arc2)
+
+            _1, _2 = round2Str(round1), round2Str(round2)
+            if not a_1_ext == numpy.inf:
+                x1 = round1[0] + numpy.sin(a_1_ext) * round1[2]
+                y1 = round1[1] + numpy.cos(a_1_ext) * round1[2]
+                x2 = round2[0] + numpy.sin(a_1_ext) * round2[2]
+                y2 = round2[1] + numpy.cos(a_1_ext) * round2[2]
+                line = [x1, y1, x2, y2]
+                crossed = False
+                for r in rounds:
+                    if crossed == True: continue
+                    if r == round1 or r == round2: continue
+                    if isCrossed(line, r): crossed = True
+
+                if not crossed:
+                    d1 = distanceBetweenRoundPoits(round1, a_1_ext, round2, a_1_ext)
+                    if d1_ext == Direction.CONTERCW:
+                        graph[_1+"CCW"][1].setdefault(_2+"CCW", (d1, a_1_ext))
+                        graph[_2+"CWS"][1].setdefault(_1+"CWS", (d1, a_1_ext))
+                    else:
+                        graph[_1+"CWS"][1].setdefault(_2+"CWS", (d1, a_1_ext))
+                        graph[_2+"CCW"][1].setdefault(_1+"CCW", (d1, a_1_ext))
+
+            if not a_2_ext == numpy.inf:
+                x1 = round1[0] + numpy.sin(a_2_ext) * round1[2]
+                y1 = round1[1] + numpy.cos(a_2_ext) * round1[2]
+                x2 = round2[0] + numpy.sin(a_2_ext) * round2[2]
+                y2 = round2[1] + numpy.cos(a_2_ext) * round2[2]
+                line = [x1, y1, x2, y2]
+                crossed = False
+                for r in rounds:
+                    if crossed == True: continue
+                    if r == round1 or r == round2: continue
+                    if isCrossed(line, r): crossed = True
+
+                if not crossed:
+                    d1 = distanceBetweenRoundPoits(round1, a_2_ext, round2, a_2_ext)
+                    if d1_ext == Direction.CONTERCW:
+                        graph[_1 + "CWS"][1].setdefault(_2 + "CWS", (d1, a_2_ext))
+                        graph[_2 + "CCW"][1].setdefault(_1 + "CCW", (d1, a_2_ext))
+                    else:
+                        graph[_1 + "CCW"][1].setdefault(_2 + "CCW", (d1, a_2_ext))
+                        graph[_2 + "CWS"][1].setdefault(_1 + "CWS", (d1, a_2_ext))
+
+            if not a_1_int == numpy.inf:
+                x1 = round1[0] + numpy.sin((a_1_int+numpy.pi)%(numpy.pi*2)) * round1[2]
+                y1 = round1[1] + numpy.cos((a_1_int+numpy.pi)%(numpy.pi*2)) * round1[2]
+                x2 = round2[0] + numpy.sin(a_1_int) * round2[2]
+                y2 = round2[1] + numpy.cos(a_1_int) * round2[2]
+                line = [x1, y1, x2, y2]
+                crossed = False
+                for r in rounds:
+                    if crossed == True: continue
+                    if r == round1 or r == round2: continue
+                    if isCrossed(line, r): crossed = True
+
+                if not crossed:
+                    d1 = distanceBetweenRoundPoits(round1, (a_1_int+numpy.pi)%(numpy.pi*2), round2, a_1_int)
+                    if d1_int == Direction.CLOCKWISE:
+                        graph[_1 + "CCW"][1].setdefault(_2 + "CWS", (d1, (a_1_int+numpy.pi)%(numpy.pi*2)))
+                        graph[_2 + "CCW"][1].setdefault(_1 + "CWS", (d1, a_1_int))
+                    else:
+                        graph[_1 + "CWS"][1].setdefault(_2 + "CCW", (d1, (a_1_int+numpy.pi)%(numpy.pi*2)))
+                        graph[_2 + "CWS"][1].setdefault(_1 + "CCW", (d1, a_1_int))
+
+            if not a_2_int == numpy.inf:
+                x1 = round1[0] + numpy.sin((a_2_int+numpy.pi)%(numpy.pi*2)) * round1[2]
+                y1 = round1[1] + numpy.cos((a_2_int+numpy.pi)%(numpy.pi*2)) * round1[2]
+                x2 = round2[0] + numpy.sin(a_2_ext) * round2[2]
+                y2 = round2[1] + numpy.cos(a_2_ext) * round2[2]
+                line = [x1, y1, x2, y2]
+                crossed = False
+                for r in rounds:
+                    if crossed == True: continue
+                    if r == round1 or r == round2: continue
+                    if isCrossed(line, r): crossed = True
+
+                if not crossed:
+                    d1 = distanceBetweenRoundPoits(round1, (a_2_int+numpy.pi)%(numpy.pi*2), round2, a_2_int)
+                    if d1_ext == Direction.CONTERCW:
+                        graph[_1 + "CWS"][1].setdefault(_2 + "CCW", (d1, (a_2_int+numpy.pi)%(numpy.pi*2)))
+                        graph[_2 + "CWS"][1].setdefault(_1 + "CCW", (d1, a_2_int))
+                    else:
+                        graph[_1 + "CCW"][1].setdefault(_2 + "CWS", (d1, (a_2_int+numpy.pi)%(numpy.pi*2)))
+                        graph[_2 + "CCW"][1].setdefault(_1 + "CWS", (d1, a_2_int))
+
+    return graph
+
+def DijkstraAlgorithm(graph): # graph = [item0, ..., itemN-3, start, end]; N elements
+    # TODO: clarify algorithm of finding best way
+    vertexes = dict()
+    str_rounds = list(graph.keys())
+    length = len(str_rounds)
+    graph.pop(str_rounds[length - 3])
+    graph.pop(str_rounds[length - 1])
+    _1 = str_rounds.pop(length-1)
+    _2 = str_rounds.pop(length-3)
+    for i in graph:
+        graph.get(i)[1].pop(_1, None)
+        graph.get(i)[1].pop(_2, None)
+    length -= 2
+    for i in str_rounds:
+        vertexes.setdefault(i, [False, numpy.inf, None]) # isGone / distance / way by str rounds
+    vertexes.update({str_rounds[length-2]: [False, 0, [str_rounds[length-2]]]})
+    isContinue = length
+
+    while isContinue > 1:
+        isContinue = 0
+        min_distance = numpy.inf
+        this_vertex = None
+        for circle in vertexes:
+            vertex = vertexes.get(circle)
+            if not vertex[0]:
+                isContinue += 1
+                if vertex[1] < min_distance:
+                    min_distance = vertex[1]
+                    this_vertex = circle
+
+        if this_vertex == str_rounds[length-1] or this_vertex == None:
+            # isContinue = 0
+            this_vertex = str_rounds[length - 1]
+            route = list()
+            str_route = vertexes.get(this_vertex)[2]
+            for current_number in range(len(str_route)):
+                coord = str_route[current_number].split("-")
+                coord[1] = coord[1][0:len(coord[1])-3]
+                if current_number == 0:
+                    a1 = 0
+                else:
+                    str1 = str_route[current_number-1]
+                    if current_number > 1:
+                        l = len(str1)
+                        ending = str1[l-3:l]
+                        if ending == 'CCW':
+                            str1 = str1[0:l-3]+'CWS'
+                        else:
+                            str1 = str1[0:l-3]+'CCW'
+                    str2 = str_route[current_number]
+                    if current_number < len(str_route)-1:
+                        l = len(str2)
+                        ending = str2[l - 3:l]
+                        if ending == 'CCW':
+                            str2 = str2[0:l - 3] + 'CWS'
+                        else:
+                            str2 = str2[0:l - 3] + 'CCW'
+                    a1 = graph.get(str2)[1].get(str1)[1]
+                if current_number == len(str_route) - 1:
+                    a2 = 0
+                else:
+                    a2 = graph.get(str_route[current_number])[1].get(str_route[current_number + 1])[1]
+                l = len(str_route[current_number])
+                if str_route[current_number][l-4:l] == "CCW":
+                    d = Direction.CONTERCW
+                else:
+                    d = Direction.CLOCKWISE
+                arc = Arc(int(coord[0]), int(coord[1]), graph.get(str_route[current_number])[0], a1, a2, d)
+                route.append(arc)
+            return route
+            # continue # full exit from cicle
+
+        for link in graph[this_vertex][1]:
+            if vertexes.get(link)[0]: continue
+            all_previous = vertexes.get(this_vertex)[2]
+            if len(all_previous) < 2:
+                a = 0
+            else:
+                previous = all_previous[len(all_previous)-2]
+            new_distance = min_distance
+            new_distance += lenthOfArc(graph.get(this_vertex)[0], a, graph.get(this_vertex)[1].get(link)[1])
+            new_distance += graph.get(this_vertex)[1].get(link)[0]
+            if new_distance < vertexes.get(link)[1]:
+                _ = list(all_previous)
+                _.append(link)
+                vertexes.update({link: [False, new_distance, _]})
+
+        vertexes.get(this_vertex)[0] = True
+
+    print("AAAAAAAAAAAA_AAAAAAA__a-_A_A__A__Aa-_A_a__A_A_a-AAaaaaaaaaAAAAA-AAAA")
+    return None
+
+def CreateRouteByDijkstraAlgorithm(startX, startY, endX, endY, width, height, red_zone):
+    red_zone = sorted(red_zone, key=lambda round: round[2], reverse=True)
+    red_zone = normalizeRounds(red_zone)
+    red_zone.append((startX, startY, 0))
+    red_zone.append((endX, endY, 0))
+    graph = createGraphWithRounds(red_zone)
+    route = DijkstraAlgorithm(graph)
+    return route
+
 def printroute(route):
     log_file.write("Start route\n")
     for i in route:
@@ -952,24 +1161,30 @@ def log_on():
     is_log_on = True
 
 if __name__ == "__main__":
-    def test_with_log():
+    def test_by_tree():
         global log_file, route, max_depth_of_tree
         log_file = open("log.txt", "w+")
         route = CreateRouteByTangentTree(x_start, y_start, x_end, y_end, width, height, rounds)
         log_file.close()
         drawTree(max_depth_of_tree, rounds)
-    def test_without_log():
+    def test_by_tangents():
         route = CreateRouteByTangents(x_start, y_start, x_end, y_end, width, height, rounds)
         for i in route:
             print("x = {}, y = {}, r = {}, a1 = {}, a2 = {}, dir = {}".format(i.x0, i.y0, i.r, i.a1, i.a2, i.dir))
-        drawRoute(route, rounds, i='n')
+        drawRouteInFile(route, rounds, i='n')
+    def test_by_Dejkstra():
+        route = CreateRouteByDijkstraAlgorithm(x_start, y_start, x_end, y_end, width, height, rounds)
+        for i in route:
+            print("x = {}, y = {}, r = {}, a1 = {}, a2 = {}, dir = {}".format(i.x0, i.y0, i.r, i.a1, i.a2, i.dir))
+        drawRouteInFile(route, rounds, i='n')
 
     Graph.set_parameters(width=600, height=600)
     # route = [Arc(0,0,0,0,0,Direction.CONTERCW),Arc(599,599,0,0,0,Direction.CONTERCW)]
     # rounds = [(85,80,6), (15, 16, 9), (50, 0, 8), (60, 62, 4), (200, 100, 85), (400, 360, 76), (500, 100, 50), (560, 540, 15), (380, 350, 6), (200, 280, 30), (360, 450, 100), (500, 400, 60)]
-    # rounds = [(90, 60, 20), (150, 150, 30), (500, 540, 50), (300, 340, 60)]
-    rounds = [(200, 0, 20), (200, 20, 20), (200, 50, 20), (200, 80, 20), (200, 100, 20), (200, 110, 20), (200, 145, 20), (200, 160, 20), (210, 180, 20), (200, 200, 20), (200, 235, 20), (195, 265, 20), (200, 300, 20)]
+    rounds = [(90, 60, 20), (150, 150, 30), (500, 540, 50), (300, 340, 60)]
+    # rounds = [(200, 0, 20), (200, 20, 20), (200, 50, 20), (200, 80, 20), (200, 100, 20), (200, 110, 20), (200, 145, 20), (200, 160, 20), (210, 180, 20), (200, 200, 20), (200, 235, 20), (195, 265, 20), (200, 300, 20)]
     # rounds = [(100, 100, 10), (200,200,20)]
+    # rounds = list()
     # rounds = [(100,100,10), (200,200,20), (400, 350, 100)]
 
     # drawRoute([], rounds, 600, 600, 10)
@@ -987,7 +1202,7 @@ if __name__ == "__main__":
     x_start, y_start, x_end, y_end = 0, 0, 599, 599
     width, height = 600, 600
 
-    test_with_log()
+    test_by_Dejkstra()
 
     # route = CreateRouteByTangents(x_start,y_start,x_end,y_end,width,height,rounds)
     # route = CreateRouteByTangentTree(x_start, y_start, x_end, y_end, width, height, rounds)
