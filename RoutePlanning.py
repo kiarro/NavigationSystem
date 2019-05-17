@@ -871,10 +871,10 @@ def createGraphWithRounds(rounds):
 
             _1, _2 = round2Str(round1), round2Str(round2)
             if not a_1_ext == numpy.inf:
-                x1 = round1[0] + numpy.sin(a_1_ext) * round1[2]
-                y1 = round1[1] + numpy.cos(a_1_ext) * round1[2]
-                x2 = round2[0] + numpy.sin(a_1_ext) * round2[2]
-                y2 = round2[1] + numpy.cos(a_1_ext) * round2[2]
+                x1 = round1[0] + numpy.cos(a_1_ext) * round1[2]
+                y1 = round1[1] + numpy.sin(a_1_ext) * round1[2]
+                x2 = round2[0] + numpy.cos(a_1_ext) * round2[2]
+                y2 = round2[1] + numpy.sin(a_1_ext) * round2[2]
                 line = [x1, y1, x2, y2]
                 crossed = False
                 for r in rounds:
@@ -892,10 +892,10 @@ def createGraphWithRounds(rounds):
                         graph[_2+"CCW"][1].setdefault(_1+"CCW", (d1, a_1_ext))
 
             if not a_2_ext == numpy.inf:
-                x1 = round1[0] + numpy.sin(a_2_ext) * round1[2]
-                y1 = round1[1] + numpy.cos(a_2_ext) * round1[2]
-                x2 = round2[0] + numpy.sin(a_2_ext) * round2[2]
-                y2 = round2[1] + numpy.cos(a_2_ext) * round2[2]
+                x1 = round1[0] + numpy.cos(a_2_ext) * round1[2]
+                y1 = round1[1] + numpy.sin(a_2_ext) * round1[2]
+                x2 = round2[0] + numpy.cos(a_2_ext) * round2[2]
+                y2 = round2[1] + numpy.sin(a_2_ext) * round2[2]
                 line = [x1, y1, x2, y2]
                 crossed = False
                 for r in rounds:
@@ -905,18 +905,18 @@ def createGraphWithRounds(rounds):
 
                 if not crossed:
                     d1 = distanceBetweenRoundPoits(round1, a_2_ext, round2, a_2_ext)
-                    if d1_ext == Direction.CONTERCW:
-                        graph[_1 + "CWS"][1].setdefault(_2 + "CWS", (d1, a_2_ext))
-                        graph[_2 + "CCW"][1].setdefault(_1 + "CCW", (d1, a_2_ext))
-                    else:
+                    if d2_ext == Direction.CONTERCW:
                         graph[_1 + "CCW"][1].setdefault(_2 + "CCW", (d1, a_2_ext))
                         graph[_2 + "CWS"][1].setdefault(_1 + "CWS", (d1, a_2_ext))
+                    else:
+                        graph[_1 + "CWS"][1].setdefault(_2 + "CWS", (d1, a_2_ext))
+                        graph[_2 + "CCW"][1].setdefault(_1 + "CCW", (d1, a_2_ext))
 
             if not a_1_int == numpy.inf:
-                x1 = round1[0] + numpy.sin((a_1_int+numpy.pi)%(numpy.pi*2)) * round1[2]
-                y1 = round1[1] + numpy.cos((a_1_int+numpy.pi)%(numpy.pi*2)) * round1[2]
-                x2 = round2[0] + numpy.sin(a_1_int) * round2[2]
-                y2 = round2[1] + numpy.cos(a_1_int) * round2[2]
+                x1 = round1[0] + numpy.cos((a_1_int+numpy.pi)%(numpy.pi*2)) * round1[2]
+                y1 = round1[1] + numpy.sin((a_1_int+numpy.pi)%(numpy.pi*2)) * round1[2]
+                x2 = round2[0] + numpy.cos(a_1_int) * round2[2]
+                y2 = round2[1] + numpy.sin(a_1_int) * round2[2]
                 line = [x1, y1, x2, y2]
                 crossed = False
                 for r in rounds:
@@ -934,10 +934,10 @@ def createGraphWithRounds(rounds):
                         graph[_2 + "CWS"][1].setdefault(_1 + "CCW", (d1, a_1_int))
 
             if not a_2_int == numpy.inf:
-                x1 = round1[0] + numpy.sin((a_2_int+numpy.pi)%(numpy.pi*2)) * round1[2]
-                y1 = round1[1] + numpy.cos((a_2_int+numpy.pi)%(numpy.pi*2)) * round1[2]
-                x2 = round2[0] + numpy.sin(a_2_ext) * round2[2]
-                y2 = round2[1] + numpy.cos(a_2_ext) * round2[2]
+                x1 = round1[0] + numpy.cos((a_2_int+numpy.pi)%(numpy.pi*2)) * round1[2]
+                y1 = round1[1] + numpy.sin((a_2_int+numpy.pi)%(numpy.pi*2)) * round1[2]
+                x2 = round2[0] + numpy.cos(a_2_int) * round2[2]
+                y2 = round2[1] + numpy.sin(a_2_int) * round2[2]
                 line = [x1, y1, x2, y2]
                 crossed = False
                 for r in rounds:
@@ -947,7 +947,7 @@ def createGraphWithRounds(rounds):
 
                 if not crossed:
                     d1 = distanceBetweenRoundPoits(round1, (a_2_int+numpy.pi)%(numpy.pi*2), round2, a_2_int)
-                    if d1_ext == Direction.CONTERCW:
+                    if d2_int == Direction.CONTERCW:
                         graph[_1 + "CWS"][1].setdefault(_2 + "CCW", (d1, (a_2_int+numpy.pi)%(numpy.pi*2)))
                         graph[_2 + "CWS"][1].setdefault(_1 + "CCW", (d1, a_2_int))
                     else:
@@ -1035,8 +1035,12 @@ def DijkstraAlgorithm(graph): # graph = [item0, ..., itemN-3, start, end]; N ele
                 a = 0
             else:
                 previous = all_previous[len(all_previous)-2]
+                a = graph.get(previous)[1].get(this_vertex)[1]
             new_distance = min_distance
-            new_distance += lenthOfArc(graph.get(this_vertex)[0], a, graph.get(this_vertex)[1].get(link)[1])
+            if this_vertex[len(this_vertex)-3:len(this_vertex)] == 'CWS':
+                new_distance += lenthOfArc(graph.get(this_vertex)[0], a, graph.get(this_vertex)[1].get(link)[1])
+            else:
+                new_distance += lenthOfArc(graph.get(this_vertex)[0], graph.get(this_vertex)[1].get(link)[1], a)
             new_distance += graph.get(this_vertex)[1].get(link)[0]
             if new_distance < vertexes.get(link)[1]:
                 _ = list(all_previous)
@@ -1172,7 +1176,7 @@ if __name__ == "__main__":
         for i in route:
             print("x = {}, y = {}, r = {}, a1 = {}, a2 = {}, dir = {}".format(i.x0, i.y0, i.r, i.a1, i.a2, i.dir))
         drawRouteInFile(route, rounds, i='n')
-    def test_by_Dejkstra():
+    def test_by_Dijkstra():
         route = CreateRouteByDijkstraAlgorithm(x_start, y_start, x_end, y_end, width, height, rounds)
         for i in route:
             print("x = {}, y = {}, r = {}, a1 = {}, a2 = {}, dir = {}".format(i.x0, i.y0, i.r, i.a1, i.a2, i.dir))
@@ -1181,11 +1185,11 @@ if __name__ == "__main__":
     Graph.set_parameters(width=600, height=600)
     # route = [Arc(0,0,0,0,0,Direction.CONTERCW),Arc(599,599,0,0,0,Direction.CONTERCW)]
     # rounds = [(85,80,6), (15, 16, 9), (50, 0, 8), (60, 62, 4), (200, 100, 85), (400, 360, 76), (500, 100, 50), (560, 540, 15), (380, 350, 6), (200, 280, 30), (360, 450, 100), (500, 400, 60)]
-    rounds = [(90, 60, 20), (150, 150, 30), (500, 540, 50), (300, 340, 60)]
+    # rounds = [(90, 60, 20), (150, 150, 30), (500, 540, 50), (300, 340, 60)]
     # rounds = [(200, 0, 20), (200, 20, 20), (200, 50, 20), (200, 80, 20), (200, 100, 20), (200, 110, 20), (200, 145, 20), (200, 160, 20), (210, 180, 20), (200, 200, 20), (200, 235, 20), (195, 265, 20), (200, 300, 20)]
     # rounds = [(100, 100, 10), (200,200,20)]
     # rounds = list()
-    # rounds = [(100,100,10), (200,200,20), (400, 350, 100)]
+    rounds = [(100,100,10), (200,200,20), (400, 350, 100)]
 
     # drawRoute([], rounds, 600, 600, 10)
     # Graph.createImageFile("Test_image.png", 600, 600)
@@ -1193,16 +1197,19 @@ if __name__ == "__main__":
 
     rounds = sorted(rounds, key=lambda round: round[2], reverse=True)
     print(rounds)
-    rounds = normalizeRounds(rounds)
+    # rounds = normalizeRounds(rounds)
     # print(rounds)
-    a = lookRoundsIntersections(rounds)
+    # a = lookRoundsIntersections(rounds)
     # CreateRouteByTangentTree(0, 0, 600, 600, 1000, 1000, rounds)
     # print(a)
 
     x_start, y_start, x_end, y_end = 0, 0, 599, 599
     width, height = 600, 600
 
-    test_by_Dejkstra()
+    test_by_Dijkstra()
+
+    # a = lenthOfArc(10, 1, 0)
+    # print(a)
 
     # route = CreateRouteByTangents(x_start,y_start,x_end,y_end,width,height,rounds)
     # route = CreateRouteByTangentTree(x_start, y_start, x_end, y_end, width, height, rounds)
