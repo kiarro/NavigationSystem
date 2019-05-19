@@ -5,6 +5,7 @@ from PIL import Image, ImageTk
 from tkinter import Tk
 from tkinter.filedialog import askopenfilename
 import numpy
+import os
 
 import Graph
 import TransformMatrix
@@ -23,8 +24,18 @@ def btn_openMapRefactor():
     MapRefactor.startThis(root)
 
 def btn_route():
-    route = RoutePlanning.CreateRouteByTangentTree(coordinates[0], coordinates[1], coordinates[2], coordinates[3], map_width,
-                                      map_height, circle_array)
+    global curre
+    os.remove(Graph.route_image)
+    os.system('copy {} {}'.format(Graph.final_image, Graph.route_image))
+    if current_algorithm == 'Simple':
+        route = RoutePlanning.CreateRouteByTangents(coordinates[0], coordinates[1], coordinates[2], coordinates[3],
+                                                       map_width, map_height, circle_array)
+    elif current_algorithm == 'Tree':
+        route = RoutePlanning.CreateRouteByTangentTree(coordinates[0], coordinates[1], coordinates[2], coordinates[3], map_width,
+                                          map_height, circle_array)
+    elif current_algorithm == 'Dijkstra':
+        route = RoutePlanning.CreateRouteByDijkstraAlgorithm(coordinates[0], coordinates[1], coordinates[2], coordinates[3],
+                                                       map_width, map_height, circle_array)
     print("Task complete: route was planed.")
 
     i_pr = route[0]
@@ -194,7 +205,7 @@ class Menu(Frame):  # меню
             print("Task complete: map was drew.")
             map_width, map_height = Graph.get_map_sizes()
             circle_array = TransformMatrix.transform_areas_to_circles(map_width, map_height, txt_file_with_danger_of_heights)
-            Graph.draw_list_of_circles(circle_array)
+            Graph.draw_list_of_circles(circle_array, Graph.final_image)
             print("Task complete: circumferences were constructed.")
 
 
@@ -221,23 +232,45 @@ class Menu(Frame):  # меню
         refactbtn.grid(row=8, column=0)
 
         lbl2 = Label(self, text="Просмотр результатов:")
-        lbl2.grid(row=10, column=0)  # надпись перед выпадающей кнопкой
+        lbl2.grid(row=13, column=0)  # надпись перед выпадающей кнопкой
 
         lbl3 = Label(self)  # область под выпадающую кнопку
-        lbl3.grid(row=11, column=0)
+        lbl3.grid(row=14, column=0)
 
         # выпадающая кнопка
         c = ttk.Combobox(lbl3, width=21)           #width=21 для  Windows 10
-        c['values'] = ('DangerDepthMask', 'Finale', 'Map')
+        c['values'] = ('Map', 'DangerDepthMask', 'Finale', 'Route')
         c.grid(column=0, row=1)
 
-        def fun(self, *args):
+        def fun_im(self, *args):
             global old_picture, picture
             old_picture = picture
             picture = c.get()  # запись выбранного пользователем значения в переменную picture
             Draw()
 
-        c.bind("<<ComboboxSelected>>", fun)  # считывание значения из выпадающей кнопки
+        c.bind("<<ComboboxSelected>>", fun_im)  # считывание значения из выпадающей кнопки
+
+        lbl4 = Label(self, text="Выбор алгоритма:")
+        lbl4.grid(row=10, column=0)  # надпись перед выпадающей кнопкой
+
+        lbl5 = Label(self, width=20)  # область под выпадающую кнопку
+        lbl5.grid(row=11, column=0)
+
+        # выпадающая кнопка
+        c2 = ttk.Combobox(lbl5)  # width=21 для  Windows 10
+        c2['values'] = ('Simple', 'Tree', 'Dijkstra')
+        c2.grid(column=0, row=1)
+        c2.current(0)
+        global current_algorithm
+        current_algorithm = c2.get()
+
+        def fun_al(self, *args):
+            global current_algorithm
+            current_algorithm = c2.get()  # запись выбранного пользователем значения в переменную picture
+
+        c2.bind("<<ComboboxSelected>>", fun_al)  # считывание значения из выпадающей кнопки
+
+
 
 if __name__ == "__main__":
     # main создаем главное окно

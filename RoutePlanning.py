@@ -271,7 +271,7 @@ def clarifyRoute(route, round_array):
             continue
         enemy = whereClosedByRoundsIntersection(previous_arc)
         if not (enemy == None):
-            enemy = str2Round(enemy, rounds)
+            enemy = str2Round(enemy, round_array)
             previous_arc.a2 = previous_arc.a1
             new_arc = Arc(enemy[0], enemy[1], enemy[2], previous_arc.a1, previous_arc.a2, Direction.CLOCKWISE)
 
@@ -659,6 +659,11 @@ def createCompound(arc1, arc2):
 
     return a1, a2, dir1, dir2 # angle and direction for first and second rounds
 
+# def createCompound2(arc1, arc2):
+#     a_1_ext, a_2_ext, a_1_int, a_2_int, d1_ext, d2_ext, d1_int, d2_int = createAllCompounds(arc1, arc2)
+#
+
+
 # construct compounds (angel) between two circles
 # returns in format: external, external, internal, internal, dir_ext, dir_ext, dir_int, dir_int
 def createAllCompounds(arc1, arc2):
@@ -723,7 +728,7 @@ def createTangent(XA, YA, X0, Y0, R):
         # print("a = {}".format(a))
         return (b+a)%(numpy.pi*2), (b-a)%(numpy.pi*2)
     except Exception as err:
-        print("Error in createTangent: {}-{}, {}-{}".format(X0, Y0, XA, YA))
+        #print("Error in createTangent: {}-{}, {}-{}".format(X0, Y0, XA, YA))
         return numpy.inf, numpy.inf
 
 # main function that create route throuth field
@@ -747,6 +752,7 @@ def CreateRouteByTangents(startX, startY, endX, endY, width, height, red_zone):
                 raise MainPointInBadZoneError("End point lay into interdicted zone")
         # if all right, next code will run
         # next code do normal (I hope) route
+        lookRoundsIntersections(red_zone)
         n=1
         while n>0:
             n = clarifyRoute(pointed_route, red_zone)
@@ -809,7 +815,7 @@ def CreateTangentTree(startX, startY, endX, endY, width, height, red_zone):
                     log_file.write("------\nThis is good path\n------\n")
                     printroute(tree)
                     log_file.write("---------------------\n")
-                drawRouteInFile(tree, red_zone, i=j, width=width, height=height)
+                    drawRouteInFile(tree, red_zone, i=j, width=width, height=height)
                 j += 1
                 return k
             if is_log_on:
@@ -836,7 +842,6 @@ def CreateTangentTree(startX, startY, endX, endY, width, height, red_zone):
     return route_tree
 
 def CreateRouteByTangentTree(startX, startY, endX, endY, width, height, red_zone):
-    log_on()
     red_zone = sorted(red_zone, key=lambda round: round[2], reverse=True)
     red_zone = normalizeRounds(red_zone)
     lookRoundsIntersections(red_zone)
@@ -847,10 +852,26 @@ def CreateRouteByTangentTree(startX, startY, endX, endY, width, height, red_zone
         tree.append(Arc(endX, endY, 0, 0, 0, Direction.CONTERCW))
         return tree
     global log_file
-    if is_log_on: log_file.close()
+    # if is_log_on: log_file.close()
     global good_routes
     # TODO: choose brilliant path from all created pathes
-    return good_routes[0].value
+    best_index = 1
+    min_distance = numpy.inf
+    for i in range(len(good_routes)):
+        good_route = good_routes[i].value
+        distance = 0
+        pr_point = good_route[0]
+        for point in good_route:
+            distance += distanceBetweenRoundPoits((pr_point.x0, pr_point.y0, pr_point.r), pr_point.a2, (point.x0, point.y0, point.r), point.a1)
+            if point.dir == Direction.CLOCKWISE:
+                distance += lenthOfArc(point.r, point.a1, point.a2)
+            else:
+                distance += lenthOfArc(point.r, point.a2, point.a1)
+        if distance < min_distance:
+            min_distance = distance
+            best_index = i
+
+    return good_routes[best_index].value
 
 def createGraphWithRounds(rounds):
     graph = dict()
@@ -1167,10 +1188,12 @@ def log_on():
 if __name__ == "__main__":
     def test_by_tree():
         global log_file, route, max_depth_of_tree
-        log_file = open("log.txt", "w+")
+        if is_log_on: log_file = open("log.txt", "w+")
         route = CreateRouteByTangentTree(x_start, y_start, x_end, y_end, width, height, rounds)
-        log_file.close()
-        drawTree(max_depth_of_tree, rounds)
+        drawRouteInFile(route, rounds, i='n')
+        if is_log_on:
+            log_file.close()
+            # drawTree(max_depth_of_tree, rounds)
     def test_by_tangents():
         route = CreateRouteByTangents(x_start, y_start, x_end, y_end, width, height, rounds)
         for i in route:
@@ -1184,12 +1207,12 @@ if __name__ == "__main__":
 
     Graph.set_parameters(width=600, height=600)
     # route = [Arc(0,0,0,0,0,Direction.CONTERCW),Arc(599,599,0,0,0,Direction.CONTERCW)]
-    # rounds = [(85,80,6), (15, 16, 9), (50, 0, 8), (60, 62, 4), (200, 100, 85), (400, 360, 76), (500, 100, 50), (560, 540, 15), (380, 350, 6), (200, 280, 30), (360, 450, 100), (500, 400, 60)]
+    rounds = [(85,80,6), (15, 16, 9), (50, 0, 8), (60, 62, 4), (200, 100, 85), (400, 360, 76), (500, 100, 50), (560, 540, 15), (380, 350, 6), (200, 280, 30), (360, 450, 100), (500, 400, 60)]
     # rounds = [(90, 60, 20), (150, 150, 30), (500, 540, 50), (300, 340, 60)]
     # rounds = [(200, 0, 20), (200, 20, 20), (200, 50, 20), (200, 80, 20), (200, 100, 20), (200, 110, 20), (200, 145, 20), (200, 160, 20), (210, 180, 20), (200, 200, 20), (200, 235, 20), (195, 265, 20), (200, 300, 20)]
     # rounds = [(100, 100, 10), (200,200,20)]
     # rounds = list()
-    rounds = [(100,100,10), (200,200,20), (400, 350, 100)]
+    # rounds = [(100,100,10), (200,200,20), (400, 350, 100)]
 
     # drawRoute([], rounds, 600, 600, 10)
     # Graph.createImageFile("Test_image.png", 600, 600)
@@ -1206,6 +1229,7 @@ if __name__ == "__main__":
     x_start, y_start, x_end, y_end = 0, 0, 599, 599
     width, height = 600, 600
 
+    # log_on()
     test_by_Dijkstra()
 
     # a = lenthOfArc(10, 1, 0)

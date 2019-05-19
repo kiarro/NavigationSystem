@@ -16,6 +16,7 @@ txt_file_with_danger_of_heights = "DepthDangerZone.txt"
 map_image = "Map.png"
 depth_danger_image = "DangerDepthMask.png"
 final_image = "Finale.png"
+route_image = "Route.png"
 
 # Map colours
 ground_colour = 160, 82, 45, 255
@@ -48,7 +49,7 @@ def createImageFile(name, width, height):
     im.save(name)
     im.close()
 
-def draw_list_of_lines(list_of_lines, image=final_image):
+def draw_list_of_lines(list_of_lines, image=route_image):
     global width_of_map, height_of_map
     im = Image.open(image)
     width_of_map, height_of_map = im.size
@@ -91,7 +92,7 @@ def draw_line(x_st, y_st, x_en, y_en, im):
                         im.putpixel((x, yy), path_colour)
             y_pr = y
 
-def draw_list_of_circles(list_of_circles, image=final_image):
+def draw_list_of_circles(list_of_circles, image=route_image):
     global width_of_map, height_of_map
     im = Image.open(image)
     width_of_map, height_of_map = im.size
